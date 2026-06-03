@@ -1,0 +1,36 @@
+{
+  "maShort": 5,
+  "maMiddle": 25,
+  "entryMaPremium": 0.005,
+  "entryUpperPremium": 0.015,
+  "maxLossYen": 12000,
+  "defaultShares": 100,
+  "ma5DeviationMin": -0.015,
+  "ma5DeviationMax": 0.015,
+  "yearHighDeviationMin": -0.1,
+  "yearHighDeviationMax": -0.02,
+  "themeRankTopPercent": 0.3,
+  "leaderMa5AboveRatioMin": 0.5,
+  "leaderMa25AboveRatioMin": 0.5,
+  "individualBuyScoreThreshold": 85,
+  "individualWatchScoreThreshold": 70,
+  "themeBuyScoreThreshold": 80,
+  "themeWatchScoreThreshold": 60,
+  "trendFlatTolerance": 0,
+  "scoring": {
+    "individual": {
+      "ma25TrendUp": 20,
+      "closeAboveMa25": 20,
+      "ma5DeviationInRange": 25,
+      "ma5TrendUpOrFlat": 10,
+      "yearHighDeviationInRange": 10,
+      "expectedLossWithinLimit": 15
+    },
+    "theme": {
+      "rankTopPercent": 30,
+      "leaderMa5AboveRatio": 30,
+      "leaderMa25AboveRatio": 20,
+      "return5dPositive": 20
+    }
+  }
+}

@@ -1,0 +1,38 @@
+import { notFound } from "next/navigation";
+import { StockDetail } from "../../../components/StockDetail";
+import { readEvaluation, readPricesForCode } from "../../../lib/data";
+
+export const dynamic = "force-dynamic";
+
+interface StockPageProps {
+  params: Promise<{
+    code: string;
+  }>;
+}
+
+export default async function StockPage({ params }: StockPageProps) {
+  const { code } = await params;
+  const evaluation = readEvaluation();
+  const candidates = evaluation.candidates.filter((item) => item.code === code);
+  const primary = candidates[0];
+
+  if (!primary) {
+    notFound();
+  }
+
+  const prices = readPricesForCode(code);
+
+  return (
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">
+            {primary.code} {primary.name}
+          </h1>
+          <p className="page-meta">{candidates.map((candidate) => candidate.theme).join(" / ")}</p>
+        </div>
+      </div>
+      <StockDetail candidates={candidates} prices={prices} />
+    </main>
+  );
+}

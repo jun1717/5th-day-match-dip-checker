@@ -1,0 +1,26 @@
+{
+  "name": "sector-pullback-checker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "python3 scripts/fetch_prices.py && npm run evaluate && next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "evaluate": "tsx scripts/evaluate_candidates.ts",
+    "test": "node --test --import tsx tests/*.test.ts"
+  },
+  "dependencies": {
+    "lightweight-charts": "^4.2.3",
+    "next": "^15.3.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
