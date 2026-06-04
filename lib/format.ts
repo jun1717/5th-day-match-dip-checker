@@ -43,6 +43,12 @@ export function themeStatusLabel(status: ThemeStatus): string {
   }[status];
 }
 
+export function formatPricesAsOf(isoString: string | null): string {
+  if (!isoString) return "前日終値";
+  const match = isoString.match(/T(\d{2}:\d{2})/);
+  return match ? `${match[1]} 時点` : "前日終値";
+}
+
 export function trendLabel(trend: Trend): string {
   return {
     up: "上向き",

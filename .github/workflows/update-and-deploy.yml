@@ -1,0 +1,65 @@
+name: Update and Deploy
+
+on:
+  schedule:
+    - cron: '0,20,40 0-5 * * 1-5'  # 09:00〜14:40 JST (00:00〜05:40 UTC)
+    - cron: '0,20 6 * * 1-5'        # 15:00〜15:20 JST (06:00〜06:20 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Fetch prices
+        run: python scripts/fetch_prices.py
+
+      - name: Evaluate candidates
+        run: npm run evaluate
+
+      - name: Set base path from repo name
+        id: base
+        run: echo "path=/${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+
+      - name: Build static site
+        run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.base.outputs.path }}
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

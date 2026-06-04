@@ -57,6 +57,7 @@ export function evaluateCandidates(
 
   return {
     generatedAt,
+    pricesAsOf: null,
     rules,
     candidates,
     themeScores

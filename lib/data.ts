@@ -31,17 +31,19 @@ export function readEvaluation(): EvaluationOutput {
   const rules = readRules();
   const generatedCandidates = readJsonFile<CandidateResult[]>("data/candidates.json", []);
   const generatedThemes = readJsonFile<ThemeScore[]>("data/theme_scores.json", []);
+  const pricesAsOf = readPricesAsOf();
 
   if (generatedCandidates.length > 0 || generatedThemes.length > 0) {
     return {
       generatedAt: generatedFileTime(),
+      pricesAsOf,
       rules,
       candidates: generatedCandidates,
       themeScores: generatedThemes
     };
   }
 
-  return evaluateCandidates(readWatchlist(), readPrices(), rules);
+  return { ...evaluateCandidates(readWatchlist(), readPrices(), rules), pricesAsOf };
 }
 
 export function findCandidate(code: string): CandidateResult | undefined {
@@ -64,6 +66,13 @@ function readJsonFile<T>(relativePath: string, fallback: T): T {
   }
 
   return JSON.parse(text) as T;
+}
+
+function readPricesAsOf(): string | null {
+  const filePath = resolvePath("data/prices_as_of.json");
+  if (!existsSync(filePath)) return null;
+  const data = JSON.parse(readFileSync(filePath, "utf8")) as { as_of: string | null };
+  return data.as_of ?? null;
 }
 
 function readText(relativePath: string): string {

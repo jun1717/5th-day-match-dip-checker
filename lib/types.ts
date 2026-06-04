@@ -127,6 +127,7 @@ export interface ThemeScore {
 
 export interface EvaluationOutput {
   generatedAt: string;
+  pricesAsOf: string | null;
   rules: Rules;
   candidates: CandidateResult[];
   themeScores: ThemeScore[];

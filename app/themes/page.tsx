@@ -1,8 +1,6 @@
 import { ThemeRanking } from "../../components/ThemeRanking";
 import { readEvaluation } from "../../lib/data";
 
-export const dynamic = "force-dynamic";
-
 export default function ThemesPage() {
   const evaluation = readEvaluation();
 

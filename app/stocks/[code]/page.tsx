@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import { StockDetail } from "../../../components/StockDetail";
-import { readEvaluation, readPricesForCode } from "../../../lib/data";
+import { readEvaluation, readPricesForCode, readWatchlist } from "../../../lib/data";
 
-export const dynamic = "force-dynamic";
+export function generateStaticParams() {
+  const watchlist = readWatchlist();
+  const codes = [...new Set(watchlist.map((row) => row.code))];
+  return codes.map((code) => ({ code }));
+}
 
 interface StockPageProps {
   params: Promise<{

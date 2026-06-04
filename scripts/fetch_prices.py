@@ -4,13 +4,18 @@
 from __future__ import annotations
 
 import csv
+import json
 import sys
+from datetime import date, timedelta, timezone
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 WATCHLIST_PATH = ROOT / "data" / "watchlist.csv"
 PRICES_PATH = ROOT / "data" / "prices.csv"
+AS_OF_PATH = ROOT / "data" / "prices_as_of.json"
+
+JST = timezone(timedelta(hours=9))
 
 
 def normalize_code(code: str) -> str:
@@ -38,6 +43,57 @@ def unique_codes(stocks: list[dict[str, str]]) -> list[str]:
     return codes
 
 
+def fetch_today_row(ticker: str, code: str) -> tuple[dict, str] | None:
+    """当日の分足データからOHLCVを集計して返す。(row, as_of_iso) のタプル。データがなければ None。"""
+    import pandas as pd
+    import yfinance as yf
+
+    try:
+        data = yf.download(ticker, period="1d", interval="1m", auto_adjust=False, progress=False)
+    except Exception:
+        return None
+
+    if data.empty:
+        return None
+
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+
+    today = date.today()
+    today_data = data[data.index.date == today]
+
+    if today_data.empty:
+        return None
+
+    open_price = today_data["Open"].iloc[0]
+    high_price = today_data["High"].max()
+    low_price = today_data["Low"].min()
+    close_price = today_data["Close"].iloc[-1]
+    volume = today_data["Volume"].sum()
+
+    if any(pd.isna(v) for v in [open_price, high_price, low_price, close_price, volume]):
+        return None
+
+    # 最終バーの時刻をJSTに変換
+    last_ts = today_data.index[-1]
+    if last_ts.tzinfo is not None:
+        jst_time = last_ts.astimezone(JST)
+    else:
+        jst_time = last_ts.replace(tzinfo=JST)
+    as_of = jst_time.isoformat()
+
+    row = {
+        "code": code,
+        "date": today.strftime("%Y-%m-%d"),
+        "open": round(float(open_price), 2),
+        "high": round(float(high_price), 2),
+        "low": round(float(low_price), 2),
+        "close": round(float(close_price), 2),
+        "volume": int(volume),
+    }
+    return row, as_of
+
+
 def main() -> int:
     try:
         import pandas as pd
@@ -47,12 +103,13 @@ def main() -> int:
         return 1
 
     rows: list[dict[str, str | int | float]] = []
+    prices_as_of: str | None = None
 
     for code in unique_codes(read_watchlist()):
         ticker = f"{code}.T"
         try:
             data = yf.download(ticker, period="1y", interval="1d", auto_adjust=False, progress=False)
-        except Exception as exc:  # noqa: BLE001 - command-line fetch should continue per ticker.
+        except Exception as exc:
             print(f"warning: {ticker} の取得に失敗しました: {exc}", file=sys.stderr)
             continue
 
@@ -63,7 +120,10 @@ def main() -> int:
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
 
-        for date, price in data.iterrows():
+        today_str = date.today().strftime("%Y-%m-%d")
+        daily_rows: list[dict] = []
+
+        for dt, price in data.iterrows():
             values = {
                 "open": price.get("Open"),
                 "high": price.get("High"),
@@ -75,10 +135,10 @@ def main() -> int:
             if any(pd.isna(value) for value in values.values()):
                 continue
 
-            rows.append(
+            daily_rows.append(
                 {
                     "code": code,
-                    "date": date.strftime("%Y-%m-%d"),
+                    "date": dt.strftime("%Y-%m-%d"),
                     "open": round(float(values["open"]), 2),
                     "high": round(float(values["high"]), 2),
                     "low": round(float(values["low"]), 2),
@@ -87,11 +147,26 @@ def main() -> int:
                 }
             )
 
+        # 当日の基準時刻が未確定なら分足から取得（日足の途中バーには時刻情報がないため）
+        has_today = any(r["date"] == today_str for r in daily_rows)
+        if prices_as_of is None:
+            result = fetch_today_row(ticker, code)
+            if result:
+                today_row, as_of = result
+                prices_as_of = as_of
+                if not has_today:
+                    daily_rows.append(today_row)
+
+        rows.extend(daily_rows)
+
     PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
     with PRICES_PATH.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=["code", "date", "open", "high", "low", "close", "volume"])
         writer.writeheader()
         writer.writerows(rows)
+
+    with AS_OF_PATH.open("w", encoding="utf-8") as file:
+        json.dump({"as_of": prices_as_of}, file)
 
     print(f"saved {len(rows)} rows to {PRICES_PATH.relative_to(ROOT)}")
     return 0

@@ -1,8 +1,6 @@
 import { CandidateTable } from "../../components/CandidateTable";
 import { readEvaluation } from "../../lib/data";
 
-export const dynamic = "force-dynamic";
-
 export default function CandidatesPage() {
   const evaluation = readEvaluation();
 

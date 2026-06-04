@@ -2,8 +2,7 @@ import Link from "next/link";
 import { CandidateTable } from "../components/CandidateTable";
 import { ThemeRanking } from "../components/ThemeRanking";
 import { readEvaluation } from "../lib/data";
-
-export const dynamic = "force-dynamic";
+import { formatPricesAsOf } from "../lib/format";
 
 export default function HomePage() {
   const evaluation = readEvaluation();
@@ -16,7 +15,7 @@ export default function HomePage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">トップ</h1>
-          <p className="page-meta">データ日付: {evaluation.candidates[0]?.date ?? "-"}</p>
+          <p className="page-meta">データ日付: {evaluation.candidates[0]?.date ?? "-"}　終値基準: {formatPricesAsOf(evaluation.pricesAsOf)}</p>
         </div>
         <Link className="link" href="/candidates">
           候補一覧へ
