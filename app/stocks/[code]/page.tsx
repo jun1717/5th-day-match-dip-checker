@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { StockDetail } from "../../../components/StockDetail";
-import { readEvaluation, readPricesForCode, readWatchlist } from "../../../lib/data";
+import { findBbWatch, readEvaluation, readPricesForCode, readWatchlist } from "../../../lib/data";
 
 export function generateStaticParams() {
   const watchlist = readWatchlist();
@@ -25,6 +25,7 @@ export default async function StockPage({ params }: StockPageProps) {
   }
 
   const prices = readPricesForCode(code);
+  const bbWatch = findBbWatch(code);
 
   return (
     <main className="page">
@@ -36,7 +37,7 @@ export default async function StockPage({ params }: StockPageProps) {
           <p className="page-meta">{candidates.map((candidate) => candidate.theme).join(" / ")}</p>
         </div>
       </div>
-      <StockDetail candidates={candidates} prices={prices} />
+      <StockDetail candidates={candidates} prices={prices} bbWatch={bbWatch} />
     </main>
   );
 }

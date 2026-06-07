@@ -1,6 +1,16 @@
-import { exitModeLabel, formatNumber, formatRewardR, formatYen, statusLabel, trendLabel } from "../lib/format";
+import {
+  bbWatchStatusLabel,
+  bollingerLineLabel,
+  exitModeLabel,
+  formatNumber,
+  formatPercent,
+  formatRewardR,
+  formatYen,
+  statusLabel,
+  trendLabel
+} from "../lib/format";
 import { ColoredPercent } from "./ColoredPercent";
-import { CandidateResult, PriceRow } from "../lib/types";
+import { BbWatchResult, CandidateResult, PriceRow } from "../lib/types";
 import { CandleChart } from "./CandleChart";
 import { PriorityBadge } from "./PriorityBadge";
 import { RuleBadge } from "./RuleBadge";
@@ -9,9 +19,10 @@ import { ScoreBadge } from "./ScoreBadge";
 interface StockDetailProps {
   candidates: CandidateResult[];
   prices: PriceRow[];
+  bbWatch?: BbWatchResult;
 }
 
-export function StockDetail({ candidates, prices }: StockDetailProps) {
+export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
   const primary = candidates[0];
   const sectors = Array.from(new Set(candidates.map((candidate) => candidate.sector))).join(" / ");
 
@@ -238,8 +249,87 @@ export function StockDetail({ candidates, prices }: StockDetailProps) {
           </ul>
         </div>
       </section>
+
+      {bbWatch && <BbWatchSection bbWatch={bbWatch} />}
     </div>
   );
+}
+
+function BbWatchSection({ bbWatch }: { bbWatch: BbWatchResult }) {
+  const ma25Stats = bbWatch.lineStats.find((stats) => stats.line === "ma25");
+  const lower1Stats = bbWatch.lineStats.find((stats) => stats.line === "bb_minus_1sigma");
+  const lower2Stats = bbWatch.lineStats.find((stats) => stats.line === "bb_minus_2sigma");
+
+  return (
+    <section className="surface span-two">
+      <div className="surface-header">
+        <h2 className="surface-title">ボリンジャーバンド押し目分析</h2>
+        <span className={`badge ${bbWatchStatusClass(bbWatch.bbWatchStatus)}`}>{bbWatchStatusLabel(bbWatch.bbWatchStatus)}</span>
+      </div>
+      <div className="surface-body">
+        <p className="muted" style={{ marginBottom: 12 }}>
+          BB押し目分析は監視・分析用の情報であり、現時点では正式な買い候補ではありません。5日線買い候補の判定とは独立して計算しています。
+        </p>
+
+        <div className="detail-grid">
+          <Detail label="得意ライン（preferredLine）" value={bollingerLineLabel(bbWatch.preferredLine)} />
+          <Detail label="現在位置（currentLine）" value={bollingerLineLabel(bbWatch.currentLine)} />
+          <Detail label="MA25" value={formatNumber(bbWatch.ma25, 1)} />
+          <Detail label="BB +1σ" value={formatNumber(bbWatch.bbUpper1, 1)} />
+          <Detail label="BB +2σ" value={formatNumber(bbWatch.bbUpper2, 1)} />
+          <Detail label="BB -1σ" value={formatNumber(bbWatch.bbLower1, 1)} />
+          <Detail label="BB -2σ" value={formatNumber(bbWatch.bbLower2, 1)} />
+          <Detail label="25日線方向" value={trendLabel(bbWatch.ma25Trend)} />
+        </div>
+
+        <div className="table-wrap" style={{ marginTop: 16 }}>
+          <table>
+            <thead>
+              <tr>
+                <th>反発分析対象ライン</th>
+                <th className="text-right">接触回数</th>
+                <th className="text-right">反発成功率</th>
+                <th className="text-right">平均最大上昇率(5日)</th>
+                <th className="text-right">平均最大下落率(5日)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <BbLineStatsRow label="MA25反発成功率" stats={ma25Stats} />
+              <BbLineStatsRow label="BB -1σ反発成功率" stats={lower1Stats} />
+              <BbLineStatsRow label="BB -2σ反発成功率" stats={lower2Stats} />
+            </tbody>
+          </table>
+        </div>
+
+        <div className="reason-badges" style={{ marginTop: 16 }}>
+          {bbWatch.reasons.map((reason, index) => (
+            <span className="badge neutral" key={`${reason.key}-${index}`}>
+              {reason.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BbLineStatsRow({ label, stats }: { label: string; stats?: { touchCount: number; successRate: number; avgMaxReturn5d: number; avgMaxDrawdown5d: number } }) {
+  return (
+    <tr>
+      <td>{label}</td>
+      <td className="text-right">{stats ? formatNumber(stats.touchCount) : "-"}</td>
+      <td className="text-right">{stats ? formatPercent(stats.successRate, 0) : "-"}</td>
+      <td className="text-right">{stats ? <ColoredPercent value={stats.avgMaxReturn5d} digits={2} /> : "-"}</td>
+      <td className="text-right">{stats ? <ColoredPercent value={stats.avgMaxDrawdown5d} digits={2} /> : "-"}</td>
+    </tr>
+  );
+}
+
+function bbWatchStatusClass(status: BbWatchResult["bbWatchStatus"]): string {
+  if (status === "timing_good") return "buy";
+  if (status === "watch") return "watch";
+  if (status === "insufficient_history") return "neutral";
+  return "avoid";
 }
 
 function slopeColor(value: number | null | undefined): string | undefined {

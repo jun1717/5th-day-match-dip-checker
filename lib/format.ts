@@ -1,4 +1,4 @@
-import { CandidateStatus, ExitMode, ThemeStatus, Trend } from "./types";
+import { BbWatchStatus, CandidateStatus, CurrentLine, ExitMode, PreferredLine, ThemeStatus, Trend } from "./types";
 
 export function formatNumber(value: number | null | undefined, digits = 0): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
@@ -69,4 +69,23 @@ export function formatRewardR(value: number | null | undefined): string {
 export function exitModeLabel(mode: ExitMode | null | undefined): string {
   if (!mode) return "-";
   return mode === "trend_follow_exit" ? "トレンド継続なら保有" : "第1利確で全決済";
+}
+
+export function bbWatchStatusLabel(status: BbWatchStatus): string {
+  return {
+    timing_good: "タイミング良い",
+    watch: "監視",
+    insufficient_history: "データ不足",
+    not_near: "押し目ラインから遠い"
+  }[status];
+}
+
+export function bollingerLineLabel(line: PreferredLine | CurrentLine): string {
+  return {
+    ma25: "MA25",
+    bb_minus_1sigma: "-1σ",
+    bb_minus_2sigma: "-2σ",
+    insufficient_history: "データ不足",
+    not_near_pullback_line: "押し目ラインから遠い"
+  }[line];
 }

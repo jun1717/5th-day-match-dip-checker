@@ -21,6 +21,15 @@
   "themeBuyScoreThreshold": 80,
   "themeWatchScoreThreshold": 60,
   "trendFlatTolerance": 0,
+  "bollingerPeriod": 25,
+  "bbTouchTolerance": 0.003,
+  "bbNearTolerance": 0.01,
+  "bbLookaheadDays": 5,
+  "bbSuccessReturnThreshold": 0.03,
+  "bbFailureReturnThreshold": -0.03,
+  "bbMinTouchCount": 3,
+  "bbTimingGoodSuccessRate": 0.6,
+  "bbThemeScoreThreshold": 60,
   "scoring": {
     "individual": {
       "ma25TrendUp": 20,

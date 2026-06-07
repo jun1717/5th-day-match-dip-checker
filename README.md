@@ -69,7 +69,7 @@ npm run evaluate
 python scripts/evaluate_candidates.py
 ```
 
-判定結果は `data/candidates.json` と `data/theme_scores.json` に保存されます。価格データがない銘柄はアプリ全体を止めず、`missing_price_data` を理由に出します。
+判定結果は `data/candidates.json`、`data/theme_scores.json`、`data/bb_watch.json` に保存されます。価格データがない銘柄はアプリ全体を止めず、`missing_price_data` を理由に出します。
 
 ## Next.jsアプリの起動
 
@@ -100,6 +100,25 @@ npm run dev
 第1利確ラインは直近20営業日の日中高値の最大値（`recentHigh20`）を使います。5日線押し目で買う理由は「上昇トレンド中の押し目から直近高値方向への再上昇」を狙うためであり、最初の目標は直近でつけた高値を再び試すことです。20営業日（約1ヶ月）を採用するのは、現在のトレンドサイクルで実際につけた上値抵抗を示すためで、それ以上古い高値はテーマが変化している可能性があります。
 
 リワードR（`rewardR = reward ÷ riskR`）が1.0未満の場合、損切り幅に対して利確ラインまでの利幅が小さく期待値が低いため、買い候補から監視に格下げします。テーマ資金スコアが90点以上のときはトレンド継続モードとなり、第1利確到達後も5日線を維持する間は保有継続、5日線終値割れで売ります。
+
+## BB押し目一覧（/bb-watch）
+
+`/bb-watch` は、銘柄ごとにボリンジャーバンド（25日）上のどの押し目ライン（MA25・-1σ・-2σ）で反発しやすいかを分析する**監視・分析専用**ページです。
+
+5日線買い候補とは完全に別物であり、現時点では正式な買い候補ではありません。トップページの買い候補件数や候補一覧の「買い候補」にはBB押し目監視の銘柄を含めません。ロジックも `lib/bollinger.ts`（BB計算）と `lib/bbWatch.ts`（押し目分析・ステータス判定）に分離してあり、5日線押し目ロジック（`lib/evaluator.ts`）には影響しません。
+
+過去1年の日足データから各ライン（MA25・-1σ・-2σ）への接触イベント（`安値 <= ライン × 1.003`）を検出し、接触後5営業日以内の値動き（+3%以上で反発成功、-3%以上で反発失敗）を集計して `touchCount` / `successRate` / `avgMaxReturn5d` / `avgMaxDrawdown5d` を算出します。接触回数が3回以上あるラインの中で最も成功率が高いラインを `preferredLine`（得意ライン）とし、3回未満の場合は `insufficient_history`（データ不足）として扱います。
+
+現在値（終値または安値）が各ラインの ±1.0% 以内に近づいている場合は `currentLine` としてそのラインを記録します。`bbWatchStatus` は次のように判定します。
+
+- `timing_good`（タイミング良い）: 得意ラインに接近していて、その成功率が60%以上、テーマ資金スコアが基準以上、25日線も下向きすぎない
+- `watch`（監視）: いずれかの押し目ラインに接近しているが、タイミング良いの基準には届いていない
+- `insufficient_history`（データ不足）: 過去の接触回数が不足していて得意ラインを判定できない
+- `not_near`（押し目ラインから遠い）: どの押し目ラインにも近づいていない
+
+初期表示は `timing_good` と `watch` のみで、`insufficient_history` と `not_near` はチェックボックスで表示を切り替えられます。判定結果は `data/bb_watch.json` に保存され、`npm run evaluate` で再生成されます。条件は `config/rules.json` の `bollingerPeriod` / `bbTouchTolerance` / `bbNearTolerance` / `bbLookaheadDays` / `bbSuccessReturnThreshold` / `bbFailureReturnThreshold` / `bbMinTouchCount` / `bbTimingGoodSuccessRate` / `bbThemeScoreThreshold` で変更できます（5日線押し目ルールとは独立しています）。
+
+将来的にBB押し目を正式な買い候補へ昇格させる可能性を見据え、ロジックを分離した設計にしています。
 
 ## MVPで未実装
 

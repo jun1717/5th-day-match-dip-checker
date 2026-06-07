@@ -91,6 +91,16 @@ export default function HelpPage() {
               </div>
 
               <div className="help-screen-item">
+                <h3 className="help-h3">BB押し目一覧 <span className="muted">（/bb-watch）</span></h3>
+                <ul className="help-list">
+                  <li>銘柄ごとにボリンジャーバンド（25日）の押し目ライン（MA25・-1σ・-2σ）への過去の反発実績を集計</li>
+                  <li>得意ライン（過去最も反発しやすかったライン）と現在の接近状況を確認できる<strong>監視・分析専用</strong>のページ</li>
+                  <li>初期表示は「タイミング良い」「監視」のみ。チェックボックスで「データ不足」「押し目ラインから遠い」銘柄も表示可能</li>
+                  <li>5日線買い候補とは別物であり、買い候補件数や候補一覧には含まれません</li>
+                </ul>
+              </div>
+
+              <div className="help-screen-item">
                 <h3 className="help-h3">投資テーマランキング <span className="muted">（/themes）</span></h3>
                 <ul className="help-list">
                   <li>AテーマとBテーマを分けてテーマ順位順に表示</li>
@@ -109,6 +119,53 @@ export default function HelpPage() {
               </div>
 
             </div>
+          </div>
+        </section>
+
+        {/* BB押し目一覧について */}
+        <section className="surface span-two">
+          <div className="surface-header">
+            <h2 className="surface-title">BB押し目一覧について</h2>
+          </div>
+          <div className="surface-body">
+            <p>
+              BB押し目一覧は、ボリンジャーバンドを使って銘柄ごとの反発しやすい押し目ラインを分析する監視ページです。
+            </p>
+            <p style={{ marginTop: 12 }}>
+              5日線買い候補とは別物であり、現時点では正式な買い候補ではありません。
+            </p>
+            <p style={{ marginTop: 12 }}>
+              MA25、-1σ、-2σのうち、過去にどのラインで反発しやすかったかを集計し、現在そのラインに近づいている銘柄を表示します。
+            </p>
+            <p style={{ marginTop: 12 }}>
+              将来的に売買ルールへ昇格させる可能性はありますが、現時点では補助分析として使います。
+            </p>
+            <table style={{ marginTop: 16 }}>
+              <thead>
+                <tr>
+                  <th>判定（bbWatchStatus）</th>
+                  <th>意味</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span className="badge buy">タイミング良い</span></td>
+                  <td>得意ラインに接近していて、その反発成功率が60%以上、テーマ資金スコアも基準以上、25日線も下向きすぎない状態</td>
+                </tr>
+                <tr>
+                  <td><span className="badge watch">監視</span></td>
+                  <td>MA25・-1σ・-2σのいずれかに接近しているが、タイミング良いの基準には届いていない状態</td>
+                </tr>
+                <tr>
+                  <td><span className="badge neutral">データ不足</span></td>
+                  <td>過去の接触回数が不足していて、得意ライン（preferredLine）を判定できない状態</td>
+                </tr>
+                <tr>
+                  <td><span className="badge avoid">押し目ラインから遠い</span></td>
+                  <td>どの押し目ラインにも近づいていない状態</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
