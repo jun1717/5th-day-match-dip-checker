@@ -1,6 +1,9 @@
 name: Update and Deploy
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0,20,40 0-5 * * 1-5'  # 09:00〜14:40 JST (00:00〜05:40 UTC)
     - cron: '0,20 6 * * 1-5'        # 15:00〜15:20 JST (06:00〜06:20 UTC)

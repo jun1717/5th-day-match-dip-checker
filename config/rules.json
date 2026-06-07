@@ -1,6 +1,10 @@
 {
   "maShort": 5,
   "maMiddle": 25,
+  "recentHighLookback": 20,
+  "minRewardR": 1.0,
+  "profitWarningMa25Deviation": 0.08,
+  "trendFollowThemeScoreThreshold": 90,
   "entryMaPremium": 0.005,
   "entryUpperPremium": 0.015,
   "maxLossYen": 12000,

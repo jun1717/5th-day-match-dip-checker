@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatNumber, formatPercent, formatYen, statusLabel, trendLabel } from "../lib/format";
+import { formatNumber, formatPercent, formatYen, formatRewardR, exitModeLabel, statusLabel, trendLabel } from "../lib/format";
+import { ColoredPercent } from "./ColoredPercent";
 import { CandidateResult, CandidateStatus } from "../lib/types";
 import { PriorityBadge } from "./PriorityBadge";
 import { ScoreBadge } from "./ScoreBadge";
@@ -29,7 +30,9 @@ type SortKey =
   | "entryPrice"
   | "entryUpperPrice"
   | "stopLoss"
-  | "expectedLoss";
+  | "expectedLoss"
+  | "takeProfit1"
+  | "rewardR";
 
 const statusOrder: Record<CandidateStatus, number> = {
   buy_candidate: 0,
@@ -92,6 +95,9 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
               <SortableHeader label="買い上限価格" sortKey="entryUpperPrice" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="損切りライン" sortKey="stopLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="想定損失" sortKey="expectedLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="第1利確ライン" sortKey="takeProfit1" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="リワードR" sortKey="rewardR" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <th>利確方針</th>
               <th>判定理由</th>
               <th>明日の行動</th>
             </tr>
@@ -115,7 +121,7 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
                 <td className="text-right">{formatNumber(candidate.close)}</td>
                 <td className="text-right">{formatNumber(candidate.ma5, 1)}</td>
                 <td className="text-right">{formatNumber(candidate.ma25, 1)}</td>
-                <td className="text-right">{formatPercent(candidate.ma5Deviation, 2)}</td>
+                <td className="text-right"><ColoredPercent value={candidate.ma5Deviation} digits={2} /></td>
                 <td>{trendLabel(candidate.ma25Trend)}</td>
                 <td>
                   <ScoreBadge score={candidate.individualScore} />
@@ -131,6 +137,13 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
                     {formatYen(candidate.expectedLoss)}
                   </span>
                 </td>
+                <td className="text-right">{formatNumber(candidate.takeProfit1)}</td>
+                <td className="text-right">
+                  <span className={candidate.rewardR !== null && candidate.rewardR < 1.0 ? "badge fail" : ""}>
+                    {formatRewardR(candidate.rewardR)}
+                  </span>
+                </td>
+                <td>{exitModeLabel(candidate.exitMode)}</td>
                 <td>
                   <div className="reason-badges">
                     {candidate.reasons.map((reason, index) => (

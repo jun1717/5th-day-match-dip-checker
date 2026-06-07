@@ -1,5 +1,12 @@
 export type Trend = "up" | "flat" | "down" | "unknown";
 
+export type ExitMode = "target_exit" | "trend_follow_exit";
+
+export interface ProfitWarning {
+  key: string;
+  label: string;
+}
+
 export type CandidateStatus = "buy_candidate" | "watch" | "avoid";
 
 export type ThemeStatus = "strong" | "watch" | "weak";
@@ -48,6 +55,10 @@ export interface ScoringWeights {
 export interface Rules {
   maShort: number;
   maMiddle: number;
+  recentHighLookback: number;
+  minRewardR: number;
+  profitWarningMa25Deviation: number;
+  trendFollowThemeScoreThreshold: number;
   entryMaPremium: number;
   entryUpperPremium: number;
   maxLossYen: number;
@@ -106,6 +117,13 @@ export interface CandidateResult {
   entryUpperPrice: number | null;
   stopLoss: number | null;
   expectedLoss: number | null;
+  recentHigh20: number | null;
+  takeProfit1: number | null;
+  riskR: number | null;
+  reward: number | null;
+  rewardR: number | null;
+  exitMode: ExitMode | null;
+  profitWarnings: ProfitWarning[];
   reasons: RuleReason[];
   tomorrowAction: string;
   intradayMemo: string[];

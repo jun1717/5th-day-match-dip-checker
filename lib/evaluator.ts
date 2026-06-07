@@ -3,8 +3,10 @@ import { scoreIndividual, scoreTheme, themeStatus } from "./scoring";
 import {
   CandidateResult,
   CandidateStatus,
+  ExitMode,
   EvaluationOutput,
   PriceRow,
+  ProfitWarning,
   RuleReason,
   Rules,
   ThemeScore,
@@ -14,7 +16,7 @@ import {
 const BUY_ACTION =
   "9:30〜10:00に確認。現在値が買い基準価格より高ければ、買い基準価格で指値注文。約定しなければ追いかけない。現在値が買い基準価格以下なら、5分足の下げ止まり確認後のみ成行買い。損切りラインは前日に決めた位置から下げない。";
 
-type CandidateDraft = Omit<CandidateResult, "themeScore" | "themeRank" | "status" | "tomorrowAction"> & {
+type CandidateDraft = Omit<CandidateResult, "themeScore" | "themeRank" | "status" | "tomorrowAction" | "exitMode" | "profitWarnings"> & {
   conditions: {
     ma25TrendUp: boolean;
     closeAboveMa25: boolean;
@@ -42,6 +44,8 @@ export function evaluateCandidates(
       const themeScoreValue = theme?.themeScore ?? 0;
       const status = classifyCandidate(draft, themeScoreValue, rules);
       const reasons = reasonsForCandidate(draft, themeScoreValue, status, rules);
+      const exitMode = exitModeFor(draft, themeScoreValue, rules);
+      const profitWarnings = computeProfitWarnings(draft, themeScoreValue, theme, rules);
       const { conditions: _conditions, ...candidateDraft } = draft;
 
       return {
@@ -50,7 +54,9 @@ export function evaluateCandidates(
         themeScore: themeScoreValue,
         themeRank: theme?.rank ?? null,
         status,
-        tomorrowAction: actionForStatus(status)
+        tomorrowAction: actionForStatus(status),
+        exitMode,
+        profitWarnings
       };
     })
     .sort(sortCandidates);
@@ -106,6 +112,11 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
   const entryUpperPrice = ma5 === null ? null : ma5 * (1 + rules.entryUpperPremium);
   const stopLoss = previous.low;
   const expectedLoss = entryPrice === null ? null : Math.max(0, (entryPrice - stopLoss) * rules.defaultShares);
+  const recentHigh20 = max(highs.slice(-rules.recentHighLookback));
+  const takeProfit1 = recentHigh20;
+  const riskR = entryPrice !== null && stopLoss !== null && entryPrice > stopLoss ? entryPrice - stopLoss : null;
+  const reward = takeProfit1 !== null && entryPrice !== null ? takeProfit1 - entryPrice : null;
+  const rewardR = riskR !== null && riskR > 0 && reward !== null ? reward / riskR : null;
 
   const conditions = {
     ma25TrendUp: ma25Trend === "up",
@@ -156,6 +167,11 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
     entryUpperPrice,
     stopLoss,
     expectedLoss,
+    recentHigh20,
+    takeProfit1,
+    riskR,
+    reward,
+    rewardR,
     reasons: [],
     intradayMemo: intradayMemoFor(rules),
     conditions
@@ -192,6 +208,11 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
     entryUpperPrice: null,
     stopLoss: null,
     expectedLoss: null,
+    recentHigh20: null,
+    takeProfit1: null,
+    riskR: null,
+    reward: null,
+    rewardR: null,
     reasons: [reason("missing_price_data", "株価データが不足", false, detail)],
     intradayMemo: intradayMemoFor(rules),
     conditions: {
@@ -404,6 +425,39 @@ function reasonsForCandidate(
     reasons.push(reason("individual_score_low", "個別押し目スコアが買い基準未満", false, `個別スコア ${draft.individualScore}`));
   }
 
+  if (draft.rewardR !== null && draft.rewardR < rules.minRewardR) {
+    reasons.push(
+      reason(
+        "reward_r_too_low",
+        "利確ラインまでの利益余地が1R未満",
+        false,
+        `リワードR ${draft.rewardR.toFixed(2)} / 最低 ${rules.minRewardR.toFixed(1)}`
+      )
+    );
+  }
+
+  if (draft.takeProfit1 !== null && draft.entryPrice !== null && draft.takeProfit1 <= draft.entryPrice) {
+    reasons.push(
+      reason(
+        "profit_target_near",
+        "直近高値が近すぎる",
+        false,
+        `第1利確 ${draft.takeProfit1.toFixed(0)} / 買い基準 ${draft.entryPrice.toFixed(0)}`
+      )
+    );
+  }
+
+  if (draft.ma25Deviation !== null && draft.ma25Deviation >= rules.profitWarningMa25Deviation) {
+    reasons.push(
+      reason(
+        "profit_warning_overheated",
+        "25日線乖離率が大きく過熱気味",
+        false,
+        `25日線乖離 ${(draft.ma25Deviation * 100).toFixed(2)}%`
+      )
+    );
+  }
+
   if (status === "watch" && reasons.length === 0) {
     reasons.push(reason("watch_conditions_pending", "監視継続", true, "買い候補条件が揃うまで追いかけない"));
   }
@@ -413,6 +467,36 @@ function reasonsForCandidate(
 
 function reason(key: string, label: string, passed: boolean, detail: string): RuleReason {
   return { key, label, passed, detail };
+}
+
+function exitModeFor(draft: CandidateDraft, themeScoreValue: number, rules: Rules): ExitMode | null {
+  if (draft.close === null) return null;
+  return themeScoreValue >= rules.trendFollowThemeScoreThreshold ? "trend_follow_exit" : "target_exit";
+}
+
+function computeProfitWarnings(
+  draft: CandidateDraft,
+  themeScoreValue: number,
+  theme: ThemeScore | undefined,
+  rules: Rules
+): ProfitWarning[] {
+  if (draft.close === null) return [];
+
+  const warnings: ProfitWarning[] = [];
+
+  if (draft.ma25Deviation !== null && draft.ma25Deviation >= rules.profitWarningMa25Deviation) {
+    warnings.push({ key: "profit_warning_overheated", label: "25日線乖離率が大きく過熱気味" });
+  }
+
+  if (themeScoreValue < rules.themeWatchScoreThreshold) {
+    warnings.push({ key: "profit_warning_theme_weak", label: "テーマ資金スコアが低下" });
+  }
+
+  if (theme !== undefined && theme.leaderMa5AboveRatio < rules.leaderMa5AboveRatioMin) {
+    warnings.push({ key: "profit_warning_leader_breakdown", label: "主役株の半数以上が5日線割れ" });
+  }
+
+  return warnings;
 }
 
 function uniqueReasons(reasons: RuleReason[]): RuleReason[] {
@@ -453,9 +537,14 @@ function classifyCandidate(draft: CandidateDraft, themeScoreValue: number, rules
     draft.conditions.closeAboveMa25 &&
     draft.conditions.ma5TrendUpOrFlat &&
     draft.conditions.expectedLossWithinLimit;
+  const rewardSufficient = draft.rewardR === null || draft.rewardR >= rules.minRewardR;
 
-  if (individualBuy && themeBuy && draft.expectedLoss <= rules.maxLossYen) {
+  if (individualBuy && themeBuy && draft.expectedLoss <= rules.maxLossYen && rewardSufficient) {
     return "buy_candidate";
+  }
+
+  if (individualBuy && themeBuy && draft.expectedLoss <= rules.maxLossYen && !rewardSufficient) {
+    return "watch";
   }
 
   if (

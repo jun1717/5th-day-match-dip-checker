@@ -174,6 +174,91 @@ export default function HelpPage() {
           </div>
         </section>
 
+        {/* 損切り・利確の考え方 */}
+        <section className="surface span-two">
+          <div className="surface-header">
+            <h2 className="surface-title">損切りラインと利確ラインの考え方</h2>
+          </div>
+          <div className="surface-body">
+            <div className="help-screens">
+
+              <div className="help-screen-item">
+                <h3 className="help-h3">損切りライン＝前日安値</h3>
+                <p>
+                  5日線押し目買いは「前日に5日線付近で下げ止まった」というシナリオで入る。
+                  前日安値を終値で割り込むということは、その日のサポートが崩れてシナリオが否定されたことを意味する。
+                  損切りは「シナリオが崩れた地点」に置くのが合理的であり、前日安値はその地点として最も明確で、前日引け後に確定できる具体的な数値。
+                </p>
+                <p className="muted" style={{marginTop: 8}}>
+                  算出式: <code>stopLoss = 前日（T-1）の安値</code>
+                </p>
+                <p className="muted" style={{marginTop: 4}}>
+                  想定損失 = （買い基準価格 − 損切りライン）× 株数（デフォルト100株）。
+                  この値が <code>maxLossYen</code>（デフォルト12,000円）を超える場合は「見送り」に分類される。
+                </p>
+              </div>
+
+              <div className="help-screen-item">
+                <h3 className="help-h3">第1利確ライン＝直近20営業日の高値</h3>
+                <p>
+                  5日線押し目で買う理由は「上昇トレンド中の一時的押し目から、直近高値方向への再上昇」を狙うため。
+                  第1利確の目標は「直近でつけた高値を再び試すこと」であり、それが最も自然な利確水準。
+                  20営業日（約1ヶ月）を使うのは、現在のトレンドサイクルで実際につけた上値抵抗を示すから。
+                  それ以上古い高値はテーマが変わっている可能性があり、参考にならない。
+                </p>
+                <p className="muted" style={{marginTop: 8}}>
+                  算出式: <code>takeProfit1 = 直近{"{recentHighLookback}"}営業日の日中高値の最大値</code>（デフォルト20日）
+                </p>
+              </div>
+
+              <div className="help-screen-item">
+                <h3 className="help-h3">リワードR（rewardR）と格下げ条件</h3>
+                <p>
+                  リワードRは「利確ラインまでの利幅÷損切り幅」で計算するリスクリワード比。
+                  1R = 損切り幅1本分の利益を意味する。
+                </p>
+                <p style={{marginTop: 8}}>
+                  5日線押し目シナリオでは、リワードRが1.0未満（利益が損失より小さい）の場合は
+                  <strong>「買い候補」から「監視」に格下げ</strong>される。
+                  利確ラインまでの余地が少ない状態でリスクを取ることは、期待値が下がるため。
+                </p>
+                <p className="muted" style={{marginTop: 8}}>
+                  算出式: <code>riskR = 買い基準価格 − 損切りライン</code><br />
+                  <code>reward = 第1利確ライン − 買い基準価格</code><br />
+                  <code>rewardR = reward ÷ riskR</code>
+                </p>
+              </div>
+
+              <div className="help-screen-item">
+                <h3 className="help-h3">利確モードと利確警戒</h3>
+                <p>
+                  利確方針は2つのモードで表示される。
+                </p>
+                <ul className="help-list" style={{marginTop: 8}}>
+                  <li>
+                    <strong>第1利確で全決済（通常モード）</strong>：
+                    テーマ資金スコアが90点未満の場合。第1利確ライン到達で全株売却する。
+                  </li>
+                  <li>
+                    <strong>トレンド継続なら保有（トレンド継続モード）</strong>：
+                    テーマ資金スコアが90点以上の場合。第1利確到達後も終値が5日線を維持する間は保有を続け、5日線終値割れで売る。
+                  </li>
+                </ul>
+                <p style={{marginTop: 8}}>
+                  また、以下の条件が重なる場合は<strong>「利確警戒」</strong>として詳細ページに表示される。
+                  ポジションを持っているときの撤退判断に使う。
+                </p>
+                <ul className="help-list" style={{marginTop: 8}}>
+                  <li>25日線乖離率が +8% 以上（過熱感が出ている）</li>
+                  <li>テーマ資金スコアが60点未満に低下（テーマの勢いが衰えた）</li>
+                  <li>主役株の半数以上が5日線を割り込んだ（テーマ全体が崩れ始めた）</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
         {/* スコアの仕組み */}
         <section className="surface span-two">
           <div className="surface-header">
@@ -248,8 +333,11 @@ export default function HelpPage() {
                 <tr><td>テーマスコア</td><td>テーマ資金スコア（0〜100点）</td></tr>
                 <tr><td>買い基準価格</td><td>5日線に小さなプレミアムを加えた価格</td></tr>
                 <tr><td>買い上限価格</td><td>これを超えて買わない上限価格</td></tr>
-                <tr><td>損切りライン</td><td>直近安値ベースの損切りライン</td></tr>
+                <tr><td>損切りライン</td><td>前日安値。この水準を終値で割ると買いシナリオが崩れたと判断する</td></tr>
                 <tr><td>想定損失</td><td>損切りした場合の想定損失額（円）。上限超過は赤表示</td></tr>
+                <tr><td>第1利確ライン</td><td>直近20営業日の高値。5日線押し目シナリオの最初の利確目標</td></tr>
+                <tr><td>リワードR</td><td>利確ラインまでの利幅÷損切り幅。1R未満（利確余地が少ない）は赤表示で監視に格下げ</td></tr>
+                <tr><td>利確方針</td><td>テーマスコアが90点以上なら「トレンド継続なら保有」、未満なら「第1利確で全決済」</td></tr>
                 <tr><td>判定理由</td><td>各ルールのpass/fail判定バッジ</td></tr>
                 <tr><td>明日の行動</td><td>明日の行動プラン（自動生成テキスト）</td></tr>
               </tbody>
@@ -312,10 +400,14 @@ export default function HelpPage() {
                 <tr><td>yearHighDeviationMin / Max</td><td>年初来高値からの押し幅の許容レンジ</td></tr>
                 <tr><td>maxLossYen</td><td>1回の取引での最大許容損失額（円）</td></tr>
                 <tr><td>defaultShares</td><td>想定損失計算に使う株数</td></tr>
+                <tr><td>recentHighLookback</td><td>第1利確ライン（直近高値）の参照日数。デフォルト20営業日（約1ヶ月）</td></tr>
+                <tr><td>minRewardR</td><td>買い候補と判定するリワードRの最低値。デフォルト1.0（損切り幅と同等以上の利幅が必要）</td></tr>
+                <tr><td>profitWarningMa25Deviation</td><td>利確警戒を表示する25日線乖離率の閾値。デフォルト0.08（+8%以上で過熱とみなす）</td></tr>
+                <tr><td>trendFollowThemeScoreThreshold</td><td>トレンド継続モードに切り替えるテーマスコアの閾値。デフォルト90点</td></tr>
                 <tr><td>individualBuyScoreThreshold</td><td>買い候補と判定する個別スコアの最低値</td></tr>
                 <tr><td>individualWatchScoreThreshold</td><td>監視と判定する個別スコアの最低値</td></tr>
                 <tr><td>themeBuyScoreThreshold</td><td>買い候補と判定するテーマスコアの最低値</td></tr>
-                <tr><td>themeWatchScoreThreshold</td><td>監視と判定するテーマスコアの最低値</td></tr>
+                <tr><td>themeWatchScoreThreshold</td><td>監視と判定するテーマスコアの最低値（利確警戒の閾値も兼ねる）</td></tr>
                 <tr><td>scoring.*</td><td>各ルール条件の配点ウェイト</td></tr>
               </tbody>
             </table>
@@ -345,6 +437,9 @@ export default function HelpPage() {
                 <tr><td>価格データなし</td><td>yfinanceで価格データを取得できなかった</td></tr>
                 <tr><td>ブレイクアウト型</td><td>高値更新中で押し目でなく上抜けパターン</td></tr>
                 <tr><td>25日線押し目型</td><td>5日線より25日線への押し目が深い状態</td></tr>
+                <tr><td>利確余地が1R未満</td><td>リワードRが1.0未満。損切り幅に対して利確ラインまでの利幅が小さく、期待値が低い。買い候補から監視に格下げ</td></tr>
+                <tr><td>直近高値が近すぎる</td><td>第1利確ライン（直近20日高値）が買い基準価格以下。利確ラインより高い位置でしか買えない状態</td></tr>
+                <tr><td>25日線乖離大・過熱気味</td><td>25日線乖離率が +8% 以上。短期的な過熱感があり押し目とは言いにくい状態</td></tr>
               </tbody>
             </table>
           </div>
@@ -359,6 +454,7 @@ export default function HelpPage() {
             <ul className="help-list">
               <li>リアルタイム5分足判定（現在は前日終値ベース）</li>
               <li>TOPIX比較によるβ補正</li>
+              <li>出来高増の上ヒゲ陰線による利確警戒（出来高データの取得が必要）</li>
               <li>出来高フィルター</li>
               <li>決算日フィルター（決算前後の銘柄の自動除外）</li>
               <li>自動売買連携</li>

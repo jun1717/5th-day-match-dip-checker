@@ -1,5 +1,6 @@
-import { formatPercent, themeStatusLabel } from "../lib/format";
+import { themeStatusLabel } from "../lib/format";
 import { ThemeScore } from "../lib/types";
+import { ColoredPercent } from "./ColoredPercent";
 import { PriorityBadge } from "./PriorityBadge";
 import { ScoreBadge } from "./ScoreBadge";
 
@@ -40,14 +41,14 @@ export function ThemeRanking({ themes, limit, priority }: ThemeRankingProps) {
               <td>
                 <PriorityBadge priority={theme.priority} scope="theme" />
               </td>
-              <td className="text-right">{formatPercent(theme.return5d, 2)}</td>
-              <td className="text-right">{formatPercent(theme.return20d, 2)}</td>
+              <td className="text-right"><ColoredPercent value={theme.return5d} digits={2} /></td>
+              <td className="text-right"><ColoredPercent value={theme.return20d} digits={2} /></td>
               <td className="text-right">{theme.rank}</td>
               <td>
                 <ScoreBadge score={theme.themeScore} />
               </td>
-              <td className="text-right">{formatPercent(theme.leaderMa5AboveRatio, 0)}</td>
-              <td className="text-right">{formatPercent(theme.leaderMa25AboveRatio, 0)}</td>
+              <td className="text-right"><ColoredPercent value={theme.leaderMa5AboveRatio} digits={0} /></td>
+              <td className="text-right"><ColoredPercent value={theme.leaderMa25AboveRatio} digits={0} /></td>
               <td>
                 <span className={`badge ${theme.status}`}>{themeStatusLabel(theme.status)}</span>
               </td>

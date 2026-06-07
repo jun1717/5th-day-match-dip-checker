@@ -1,4 +1,4 @@
-import { CandidateStatus, ThemeStatus, Trend } from "./types";
+import { CandidateStatus, ExitMode, ThemeStatus, Trend } from "./types";
 
 export function formatNumber(value: number | null | undefined, digits = 0): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
@@ -56,4 +56,17 @@ export function trendLabel(trend: Trend): string {
     down: "下向き",
     unknown: "-"
   }[trend];
+}
+
+export function formatRewardR(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${value.toFixed(2)}R`;
+}
+
+export function exitModeLabel(mode: ExitMode | null | undefined): string {
+  if (!mode) return "-";
+  return mode === "trend_follow_exit" ? "トレンド継続なら保有" : "第1利確で全決済";
 }
