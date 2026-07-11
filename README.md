@@ -89,7 +89,27 @@ npm run dev
 
 投資テーマは5日騰落率平均、20日騰落率平均、テーマ順位、テーマ主役株の5日線/25日線維持率、5日騰落率がプラスかどうかでテーマ資金スコアを計算します。
 
-最終判定は個別押し目スコア、テーマ資金スコア、想定損失、25日線割れなどのハード条件を組み合わせて、買い候補、監視、見送りに分類します。見送りや監視の理由は `reasons` 配列に、`ma5_too_far_above`、`entry_upper_exceeded`、`theme_weak`、`ma25_broken`、`ma25_trend_down`、`expected_loss_too_large`、`breakout_type`、`ma25_pullback_type`、`missing_price_data`、`reward_r_too_low`、`profit_target_near`、`profit_warning_overheated` などで保存します。
+最終判定は個別押し目スコア、テーマ資金スコア、想定損失、25日線割れなどのハード条件を組み合わせて、買い候補、監視、見送りに分類します。見送りや監視の理由は `reasons` 配列に、`ma5_too_far_above`、`entry_upper_exceeded`、`theme_weak`、`ma25_broken`、`ma25_trend_down`、`expected_loss_too_large`、`position_cost_too_large`、`breakout_type`、`ma25_pullback_type`、`missing_price_data`、`reward_r_too_low`、`profit_target_near`、`profit_warning_overheated`、`stop_too_tight`、`volume_not_dry` などで保存します。
+
+### 建玉（株数）の決め方
+
+`sizingMode` で切り替えます（既定 `risk`）。
+
+- `risk`: リスク許容額から株数を逆算します。`推奨株数 = floor(maxLossYen ÷ (買い基準価格 − 損切りライン) ÷ lotSize) × lotSize`。損切り幅が狭い銘柄ほど株数が増え、1トレードあたりのリスクが `maxLossYen`（既定1.2万円）に揃います。`maxPositionYen` を設定すると1銘柄あたりの投入額も上限で切ります（**既定は null = 上限なし。自分の1銘柄あたり投入上限に合わせて設定してください**。例: `500000`）。単元未満株（S株等）を使う場合は `allowFractionalShares: true` で1株単位になります。
+- `fixed`: 従来どおり `defaultShares`（100株）固定。
+
+`lotSize: 100`・`maxPositionYen: null` のとき、riskモードとfixedモードの買い候補/監視/見送りの判定結果は数学的に一致します（変わるのは推奨株数と想定損失の表示、バックテストの損益額のみ）。この等価性はテストで保証しています。
+
+### 品質フィルター（ATR損切り品質・出来高ドライアップ）
+
+買い候補の「押し目の質」を測る2つの独立したチェックです。個別スコアの配点（100点満点）には影響せず、`stopTightFilterMode` / `volumeFilterMode` で動作を切り替えます。
+
+- `stop_too_tight`（損切りラインが近すぎる）: 損切り幅（買い基準価格 − 前日安値）が `stopAtrMinMultiple`（既定0.3）× ATR（`atrPeriod`日、既定14日）未満だと、日常のノイズで狩られやすいタイトすぎる損切りとみなします。ATRは損切り位置を動かすためではなく品質判定にのみ使います（損切りは前日安値のまま）。
+- `volume_not_dry`（押し目中も出来高が減っていない）: 直近 `volumeShortWindow` 日（既定3日）の平均出来高 ÷ 直近 `volumeLongWindow` 日（既定20日）の平均出来高が `volumeDryUpMaxRatio`（既定0.85）以下なら売り圧力が枯れた質の良い押し目、超えていれば警告します。
+
+モードは `off`（無効）/ `flag`（理由として表示するだけ。既定）/ `exclude`（買い候補を監視に降格。見送りにはしない）の3段階です。excludeへの昇格はバックテストのバンド別成績で効果を確認してから行ってください（下記バックテスト参照）。
+
+注意: 場中の実行では当日の出来高が途中集計のため出来高比が実際より低く出ます（ドライアップ判定が通りやすい偽陽性方向）。確定判定は大引け後のスナップショットで行われます。
 
 ### 損切りライン
 
@@ -157,8 +177,21 @@ npm run backtest
 - `--statuses buy_candidate,watch`: 対象status（デフォルト buy_candidate）
 - `--stop-mode prev-day|signal`: 損切りラインの取り方。デフォルト `prev-day` は「エントリー前日＝シグナル日の安値」で、運用ドクトリンの前日安値に忠実。`signal` は評価時の `stopLoss` フィールド（シグナル日前日の安値）を使う感度分析用
 - `--max-hold-days`: 最大保有営業日数（デフォルト30。トレンドフォロー時は適用しない）
+- `--sizing fixed|risk` / `--stop-tight-filter off|flag|exclude` / `--volume-filter off|flag|exclude`: rules.json を編集せずに建玉方式・品質フィルターを一時的に上書きしてA/B比較するためのオプション（未指定時は rules.json の値）
 
-出力は `data/backtest/` に `trades.csv`（全トレード）、`summary.json`（全体・テーマ別・スコア帯別などの統計）、`cohorts.json`（status別フォワードリターン）。コンソールにもサマリ表が出ます。
+出力は `data/backtest/` に `trades.csv`（全トレード）、`summary.json`（全体・テーマ別・スコア帯別などの統計）、`cohorts.json`（status別フォワードリターン）。コンソールにもサマリ表が出ます。損切り幅ATRバンド別・出来高比バンド別の成績と、status×バンド別のコホート表（執行モデル非依存のフォワードリターン）も出るので、品質フィルターの閾値（0.3 ATR / 出来高比0.85）の妥当性を直接確認できます。
+
+品質フィルターのA/B比較の例:
+
+```bash
+# ベースライン(フィルターなし)
+npm run backtest -- --stop-tight-filter off --volume-filter off --out data/backtest/baseline
+# フィルターexcludeの効果
+npm run backtest -- --stop-tight-filter exclude --volume-filter off --out data/backtest/stop-tight
+npm run backtest -- --stop-tight-filter off --volume-filter exclude --out data/backtest/volume
+```
+
+exclude採用の目安は「ベースライン比で期待値Rが改善し、かつ約定数がベースラインの60%以上残る」ことです。2026年7月の検証結果と既定値の判断根拠は `docs/backtest-results/2026-07-atr-volume.md` を参照してください（結論: sizingMode=risk採用、両フィルターはflag維持）。
 
 結果を読むときの注意（コンソールにも表示されます）: ウォッチリスト自体が後知恵選択なので絶対値は楽観的に出ます。ルール変更の相対比較に使ってください。同日に損切りと利確が両方成立した場合は損切り扱い（保守的仮定）です。
 
@@ -166,6 +199,5 @@ npm run backtest
 
 - リアルタイム5分足判定
 - TOPIX比較
-- 出来高判定
 - 決算日フィルター
 - 自動売買

@@ -32,9 +32,9 @@
     "entryPrice": 3140.424,
     "entryUpperPrice": 3171.672,
     "stopLoss": 3104,
-    "suggestedShares": 100,
-    "positionCost": 314042.4,
-    "expectedLoss": 3642.399999999998,
+    "suggestedShares": 300,
+    "positionCost": 942127.2,
+    "expectedLoss": 10927.199999999993,
     "recentHigh20": 3277,
     "takeProfit1": 3277,
     "riskR": 36.42399999999998,
@@ -46,6 +46,12 @@
         "label": "買い候補条件を満たしている",
         "passed": true,
         "detail": "個別スコアとテーマ資金スコアが買い基準以上"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.03 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -97,9 +103,9 @@
     "entryPrice": 6129.494999999999,
     "entryUpperPrice": 6190.485,
     "stopLoss": 6072,
-    "suggestedShares": 100,
-    "positionCost": 612949.4999999999,
-    "expectedLoss": 5749.499999999898,
+    "suggestedShares": 200,
+    "positionCost": 1225898.9999999998,
+    "expectedLoss": 11498.999999999796,
     "recentHigh20": 6383,
     "takeProfit1": 6383,
     "riskR": 57.49499999999898,
@@ -111,6 +117,18 @@
         "label": "テーマ資金が買い基準未満",
         "passed": false,
         "detail": "テーマ資金スコア 70"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 57円 = 0.20 ATR / 最低 0.3 ATR"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.88 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -187,6 +205,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 8.60%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.13 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -247,9 +271,9 @@
     "entryPrice": 2910.7815,
     "entryUpperPrice": 2939.7445,
     "stopLoss": 2895,
-    "suggestedShares": 100,
-    "positionCost": 291078.15,
-    "expectedLoss": 1578.150000000005,
+    "suggestedShares": 700,
+    "positionCost": 2037547.05,
+    "expectedLoss": 11047.050000000036,
     "recentHigh20": 3010,
     "takeProfit1": 3010,
     "riskR": 15.781500000000051,
@@ -261,6 +285,12 @@
         "label": "テーマ資金が買い基準未満",
         "passed": false,
         "detail": "テーマ資金スコア 70"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 16円 = 0.15 ATR / 最低 0.3 ATR"
       }
     ],
     "intradayMemo": [
@@ -317,9 +347,9 @@
     "entryPrice": 2464.3605,
     "entryUpperPrice": 2488.8814999999995,
     "stopLoss": 2453,
-    "suggestedShares": 100,
-    "positionCost": 246436.05,
-    "expectedLoss": 1136.0499999999774,
+    "suggestedShares": 1000,
+    "positionCost": 2464360.5,
+    "expectedLoss": 11360.499999999774,
     "recentHigh20": 2717.5,
     "takeProfit1": 2717.5,
     "riskR": 11.360499999999774,
@@ -331,6 +361,12 @@
         "label": "テーマ資金が弱い",
         "passed": false,
         "detail": "テーマ資金スコア 20"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 11円 = 0.19 ATR / 最低 0.3 ATR"
       }
     ],
     "intradayMemo": [
@@ -405,6 +441,12 @@
         "label": "テーマ資金が弱い",
         "passed": false,
         "detail": "テーマ資金スコア 0"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.93 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -530,9 +572,9 @@
     "entryPrice": 2071.305,
     "entryUpperPrice": 2091.915,
     "stopLoss": 2049,
-    "suggestedShares": 100,
-    "positionCost": 207130.49999999997,
-    "expectedLoss": 2230.4999999999836,
+    "suggestedShares": 500,
+    "positionCost": 1035652.4999999999,
+    "expectedLoss": 11152.499999999918,
     "recentHigh20": 2178,
     "takeProfit1": 2178,
     "riskR": 22.304999999999836,
@@ -556,6 +598,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 75"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.98 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -607,9 +655,9 @@
     "entryPrice": 5687.696999999999,
     "entryUpperPrice": 5744.290999999999,
     "stopLoss": 5628,
-    "suggestedShares": 100,
-    "positionCost": 568769.7,
-    "expectedLoss": 5969.699999999921,
+    "suggestedShares": 200,
+    "positionCost": 1137539.4,
+    "expectedLoss": 11939.399999999841,
     "recentHigh20": 5947,
     "takeProfit1": 5947,
     "riskR": 59.69699999999921,
@@ -633,6 +681,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 75"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.95 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -710,6 +764,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 75"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.99 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -793,6 +853,18 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 8.57%"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 71円 = 0.25 ATR / 最低 0.3 ATR"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.95 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -875,6 +947,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 75"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.17 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1018,9 +1096,9 @@
     "entryPrice": 3134.394,
     "entryUpperPrice": 3165.582,
     "stopLoss": 3081,
-    "suggestedShares": 100,
-    "positionCost": 313439.39999999997,
-    "expectedLoss": 5339.399999999978,
+    "suggestedShares": 200,
+    "positionCost": 626878.7999999999,
+    "expectedLoss": 10678.799999999956,
     "recentHigh20": 3273,
     "takeProfit1": 3273,
     "riskR": 53.39399999999978,
@@ -1050,6 +1128,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 65"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.12 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1101,9 +1185,9 @@
     "entryPrice": 5427.603,
     "entryUpperPrice": 5481.6089999999995,
     "stopLoss": 5388,
-    "suggestedShares": 100,
-    "positionCost": 542760.3,
-    "expectedLoss": 3960.3000000000065,
+    "suggestedShares": 300,
+    "positionCost": 1628280.9,
+    "expectedLoss": 11880.90000000002,
     "recentHigh20": 5740,
     "takeProfit1": 5740,
     "riskR": 39.603000000000065,
@@ -1127,6 +1211,18 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 65"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 40円 = 0.28 ATR / 最低 0.3 ATR"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.01 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1222,6 +1318,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 24.90%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.10 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1282,9 +1384,9 @@
     "entryPrice": 5140.575,
     "entryUpperPrice": 5191.724999999999,
     "stopLoss": 5158,
-    "suggestedShares": 100,
-    "positionCost": 514057.5,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 5327,
     "takeProfit1": 5327,
     "riskR": null,
@@ -1302,6 +1404,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 15.85%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 2.10 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1358,9 +1466,9 @@
     "entryPrice": 4308.033,
     "entryUpperPrice": 4350.899,
     "stopLoss": 4342,
-    "suggestedShares": 100,
-    "positionCost": 430803.30000000005,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 4489,
     "takeProfit1": 4489,
     "riskR": null,
@@ -1378,6 +1486,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 8.43%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.68 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1434,9 +1548,9 @@
     "entryPrice": 4643.5019999999995,
     "entryUpperPrice": 4689.705999999999,
     "stopLoss": 4737,
-    "suggestedShares": 100,
-    "positionCost": 464350.19999999995,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 4985,
     "takeProfit1": 4985,
     "riskR": null,
@@ -1454,6 +1568,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 15.80%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.93 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1510,9 +1630,9 @@
     "entryPrice": 23623.53,
     "entryUpperPrice": 23858.589999999997,
     "stopLoss": 23600,
-    "suggestedShares": 100,
-    "positionCost": 2362353,
-    "expectedLoss": 2352.9999999998836,
+    "suggestedShares": 500,
+    "positionCost": 11811765,
+    "expectedLoss": 11764.999999999418,
     "recentHigh20": 25900,
     "takeProfit1": 25900,
     "riskR": 23.529999999998836,
@@ -1536,6 +1656,18 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 80"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 24円 = 0.03 ATR / 最低 0.3 ATR"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.92 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1592,9 +1724,9 @@
     "entryPrice": 7943.5199999999995,
     "entryUpperPrice": 8022.5599999999995,
     "stopLoss": 8000,
-    "suggestedShares": 100,
-    "positionCost": 794352,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 8553,
     "takeProfit1": 8553,
     "riskR": null,
@@ -1674,9 +1806,9 @@
     "entryPrice": 5573.3279999999995,
     "entryUpperPrice": 5628.784,
     "stopLoss": 5375,
-    "suggestedShares": 100,
-    "positionCost": 557332.7999999999,
-    "expectedLoss": 19832.799999999952,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 6073,
     "takeProfit1": 6073,
     "riskR": 198.32799999999952,
@@ -1687,7 +1819,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "19833円 / 上限 12,000円"
+        "detail": "1株リスク 198円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -1756,9 +1888,9 @@
     "entryPrice": 1817.0399999999997,
     "entryUpperPrice": 1835.12,
     "stopLoss": 1683,
-    "suggestedShares": 100,
-    "positionCost": 181703.99999999997,
-    "expectedLoss": 13403.999999999975,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 2012,
     "takeProfit1": 2012,
     "riskR": 134.03999999999974,
@@ -1769,7 +1901,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "13404円 / 上限 12,000円"
+        "detail": "1株リスク 134円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -1788,6 +1920,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 19.24%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.32 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -1848,9 +1986,9 @@
     "entryPrice": 1836.5369999999998,
     "entryUpperPrice": 1854.811,
     "stopLoss": 1790,
-    "suggestedShares": 100,
-    "positionCost": 183653.69999999998,
-    "expectedLoss": 4653.699999999981,
+    "suggestedShares": 200,
+    "positionCost": 367307.39999999997,
+    "expectedLoss": 9307.399999999961,
     "recentHigh20": 1954,
     "takeProfit1": 1954,
     "riskR": 46.53699999999981,
@@ -1960,6 +2098,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 9.88%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.98 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2016,9 +2160,9 @@
     "entryPrice": 1570.212,
     "entryUpperPrice": 1585.836,
     "stopLoss": 1529,
-    "suggestedShares": 100,
-    "positionCost": 157021.2,
-    "expectedLoss": 4121.199999999999,
+    "suggestedShares": 200,
+    "positionCost": 314042.4,
+    "expectedLoss": 8242.399999999998,
     "recentHigh20": 1610,
     "takeProfit1": 1610,
     "riskR": 41.21199999999999,
@@ -2104,9 +2248,9 @@
     "entryPrice": 1900.7564999999997,
     "entryUpperPrice": 1919.6694999999997,
     "stopLoss": 1901.5,
-    "suggestedShares": 100,
-    "positionCost": 190075.64999999997,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 1958.5,
     "takeProfit1": 1958.5,
     "riskR": null,
@@ -2130,6 +2274,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 65"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.06 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2190,9 +2340,9 @@
     "entryPrice": 1454.1345,
     "entryUpperPrice": 1468.6035,
     "stopLoss": 1483,
-    "suggestedShares": 100,
-    "positionCost": 145413.44999999998,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 1537,
     "takeProfit1": 1537,
     "riskR": null,
@@ -2216,6 +2366,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 65"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.39 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2276,9 +2432,9 @@
     "entryPrice": 3049.3709999999996,
     "entryUpperPrice": 3079.7129999999997,
     "stopLoss": 2920,
-    "suggestedShares": 100,
-    "positionCost": 304937.1,
-    "expectedLoss": 12937.099999999964,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 3410,
     "takeProfit1": 3410,
     "riskR": 129.37099999999964,
@@ -2301,7 +2457,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "12937円 / 上限 12,000円"
+        "detail": "1株リスク 129円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
@@ -2314,6 +2470,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 10.20%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.99 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2370,9 +2532,9 @@
     "entryPrice": 12382.605,
     "entryUpperPrice": 12505.814999999999,
     "stopLoss": 12955,
-    "suggestedShares": 100,
-    "positionCost": 1238260.5,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 13465,
     "takeProfit1": 13465,
     "riskR": null,
@@ -2408,6 +2570,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 12.16%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.27 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2464,9 +2632,9 @@
     "entryPrice": 58446.77999999999,
     "entryUpperPrice": 59028.34,
     "stopLoss": 59900,
-    "suggestedShares": 100,
-    "positionCost": 5844677.999999999,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 63660,
     "takeProfit1": 63660,
     "riskR": null,
@@ -2502,6 +2670,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 15.12%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.58 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2558,9 +2732,9 @@
     "entryPrice": 4012.7639999999997,
     "entryUpperPrice": 4052.692,
     "stopLoss": 3872,
-    "suggestedShares": 100,
-    "positionCost": 401276.39999999997,
-    "expectedLoss": 14076.399999999967,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 4315,
     "takeProfit1": 4315,
     "riskR": 140.76399999999967,
@@ -2583,7 +2757,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "14076円 / 上限 12,000円"
+        "detail": "1株リスク 141円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -2602,6 +2776,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 23.41%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.00 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2662,9 +2842,9 @@
     "entryPrice": 16276.979999999998,
     "entryUpperPrice": 16438.94,
     "stopLoss": 15670,
-    "suggestedShares": 100,
-    "positionCost": 1627697.9999999998,
-    "expectedLoss": 60697.999999999774,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 17350,
     "takeProfit1": 17350,
     "riskR": 606.9799999999977,
@@ -2681,7 +2861,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "60698円 / 上限 12,000円"
+        "detail": "1株リスク 607円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -2700,6 +2880,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 59.83%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.25 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -2932,9 +3118,9 @@
     "entryPrice": 6797.82,
     "entryUpperPrice": 6865.459999999999,
     "stopLoss": 6898,
-    "suggestedShares": 100,
-    "positionCost": 679782,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 7165,
     "takeProfit1": 7165,
     "riskR": null,
@@ -2964,6 +3150,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 55"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.88 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3108,9 +3300,9 @@
     "entryPrice": 1903.6709999999998,
     "entryUpperPrice": 1922.6129999999998,
     "stopLoss": 1856,
-    "suggestedShares": 100,
-    "positionCost": 190367.09999999998,
-    "expectedLoss": 4767.099999999982,
+    "suggestedShares": 200,
+    "positionCost": 380734.19999999995,
+    "expectedLoss": 9534.199999999964,
     "recentHigh20": 2011,
     "takeProfit1": 2011,
     "riskR": 47.67099999999982,
@@ -3194,9 +3386,9 @@
     "entryPrice": 4332.153,
     "entryUpperPrice": 4375.259,
     "stopLoss": 4178,
-    "suggestedShares": 100,
-    "positionCost": 433215.30000000005,
-    "expectedLoss": 15415.300000000025,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 4470,
     "takeProfit1": 4470,
     "riskR": 154.15300000000025,
@@ -3213,7 +3405,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15415円 / 上限 12,000円"
+        "detail": "1株リスク 154円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -3232,6 +3424,12 @@
         "label": "利確ラインまでの利益余地が1R未満",
         "passed": false,
         "detail": "リワードR 0.89 / 最低 1.0"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.86 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3292,9 +3490,9 @@
     "entryPrice": 4332.153,
     "entryUpperPrice": 4375.259,
     "stopLoss": 4178,
-    "suggestedShares": 100,
-    "positionCost": 433215.30000000005,
-    "expectedLoss": 15415.300000000025,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 4470,
     "takeProfit1": 4470,
     "riskR": 154.15300000000025,
@@ -3311,7 +3509,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15415円 / 上限 12,000円"
+        "detail": "1株リスク 154円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -3330,6 +3528,12 @@
         "label": "利確ラインまでの利益余地が1R未満",
         "passed": false,
         "detail": "リワードR 0.89 / 最低 1.0"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.86 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3390,9 +3594,9 @@
     "entryPrice": 3618.6029999999996,
     "entryUpperPrice": 3654.6089999999995,
     "stopLoss": 3455,
-    "suggestedShares": 100,
-    "positionCost": 361860.3,
-    "expectedLoss": 16360.299999999961,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 3759,
     "takeProfit1": 3759,
     "riskR": 163.6029999999996,
@@ -3409,7 +3613,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "16360円 / 上限 12,000円"
+        "detail": "1株リスク 164円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -3428,6 +3632,12 @@
         "label": "利確ラインまでの利益余地が1R未満",
         "passed": false,
         "detail": "リワードR 0.86 / 最低 1.0"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.93 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3488,9 +3698,9 @@
     "entryPrice": 588.5279999999999,
     "entryUpperPrice": 594.384,
     "stopLoss": 554,
-    "suggestedShares": 100,
-    "positionCost": 58852.79999999999,
-    "expectedLoss": 3452.7999999999906,
+    "suggestedShares": 300,
+    "positionCost": 176558.39999999997,
+    "expectedLoss": 10358.399999999972,
     "recentHigh20": 710,
     "takeProfit1": 710,
     "riskR": 34.527999999999906,
@@ -3526,6 +3736,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 13.18%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.85 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3590,9 +3806,9 @@
     "entryPrice": 4326.123,
     "entryUpperPrice": 4369.169,
     "stopLoss": 4190,
-    "suggestedShares": 100,
-    "positionCost": 432612.29999999993,
-    "expectedLoss": 13612.29999999996,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 4564,
     "takeProfit1": 4564,
     "riskR": 136.1229999999996,
@@ -3609,7 +3825,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "13612円 / 上限 12,000円"
+        "detail": "1株リスク 136円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
@@ -3622,6 +3838,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 18.13%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.86 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3678,9 +3900,9 @@
     "entryPrice": 7650.663,
     "entryUpperPrice": 7726.789,
     "stopLoss": 7492,
-    "suggestedShares": 100,
-    "positionCost": 765066.2999999999,
-    "expectedLoss": 15866.299999999956,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 7930,
     "takeProfit1": 7930,
     "riskR": 158.66299999999956,
@@ -3697,13 +3919,19 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15866円 / 上限 12,000円"
+        "detail": "1株リスク 159円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 50"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.91 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3755,9 +3983,9 @@
     "entryPrice": 5563.478999999999,
     "entryUpperPrice": 5618.8369999999995,
     "stopLoss": 5431,
-    "suggestedShares": 100,
-    "positionCost": 556347.8999999999,
-    "expectedLoss": 13247.899999999936,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 5989,
     "takeProfit1": 5989,
     "riskR": 132.47899999999936,
@@ -3780,13 +4008,19 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "13248円 / 上限 12,000円"
+        "detail": "1株リスク 132円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 50"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.07 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3838,9 +4072,9 @@
     "entryPrice": 10198.538999999999,
     "entryUpperPrice": 10300.016999999998,
     "stopLoss": 9858,
-    "suggestedShares": 100,
-    "positionCost": 1019853.8999999999,
-    "expectedLoss": 34053.899999999885,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 11125,
     "takeProfit1": 11125,
     "riskR": 340.53899999999885,
@@ -3857,7 +4091,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "34054円 / 上限 12,000円"
+        "detail": "1株リスク 341円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -3876,6 +4110,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 32.92%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.20 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -3936,9 +4176,9 @@
     "entryPrice": 13393.634999999998,
     "entryUpperPrice": 13526.904999999999,
     "stopLoss": 13265,
-    "suggestedShares": 100,
-    "positionCost": 1339363.4999999998,
-    "expectedLoss": 12863.49999999984,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 14850,
     "takeProfit1": 14850,
     "riskR": 128.6349999999984,
@@ -3955,7 +4195,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "12863円 / 上限 12,000円"
+        "detail": "1株リスク 129円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -3974,6 +4214,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 10.50%"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 129円 = 0.15 ATR / 最低 0.3 ATR"
       }
     ],
     "intradayMemo": [
@@ -4038,9 +4284,9 @@
     "entryPrice": 2337.3284999999996,
     "entryUpperPrice": 2360.5854999999997,
     "stopLoss": 2317,
-    "suggestedShares": 100,
-    "positionCost": 233732.84999999998,
-    "expectedLoss": 2032.8499999999622,
+    "suggestedShares": 500,
+    "positionCost": 1168664.2499999998,
+    "expectedLoss": 10164.24999999981,
     "recentHigh20": 2403.5,
     "takeProfit1": 2403.5,
     "riskR": 20.32849999999962,
@@ -4070,6 +4316,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 50"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.05 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -4224,9 +4476,9 @@
     "entryPrice": 6527.876999999999,
     "entryUpperPrice": 6592.830999999999,
     "stopLoss": 6372,
-    "suggestedShares": 100,
-    "positionCost": 652787.6999999998,
-    "expectedLoss": 15587.699999999859,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 7559,
     "takeProfit1": 7559,
     "riskR": 155.8769999999986,
@@ -4243,7 +4495,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15588円 / 上限 12,000円"
+        "detail": "1株リスク 156円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -4316,9 +4568,9 @@
     "entryPrice": 6886.460999999999,
     "entryUpperPrice": 6954.982999999999,
     "stopLoss": 6716,
-    "suggestedShares": 100,
-    "positionCost": 688646.1,
-    "expectedLoss": 17046.099999999933,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 7775,
     "takeProfit1": 7775,
     "riskR": 170.46099999999933,
@@ -4335,7 +4587,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "17046円 / 上限 12,000円"
+        "detail": "1株リスク 170円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -4408,9 +4660,9 @@
     "entryPrice": 41070.329999999994,
     "entryUpperPrice": 41478.99,
     "stopLoss": 41230,
-    "suggestedShares": 100,
-    "positionCost": 4107032.9999999995,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 45950,
     "takeProfit1": 45950,
     "riskR": null,
@@ -4446,6 +4698,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 40"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.95 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -4497,9 +4755,9 @@
     "entryPrice": 2147.7854999999995,
     "entryUpperPrice": 2169.1564999999996,
     "stopLoss": 2116.5,
-    "suggestedShares": 100,
-    "positionCost": 214778.54999999996,
-    "expectedLoss": 3128.54999999995,
+    "suggestedShares": 300,
+    "positionCost": 644335.6499999999,
+    "expectedLoss": 9385.64999999985,
     "recentHigh20": 2306,
     "takeProfit1": 2306,
     "riskR": 31.2854999999995,
@@ -4529,6 +4787,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 40"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.88 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -4937,9 +5201,9 @@
     "entryPrice": 1115.751,
     "entryUpperPrice": 1126.8529999999998,
     "stopLoss": 1070,
-    "suggestedShares": 100,
-    "positionCost": 111575.09999999999,
-    "expectedLoss": 4575.099999999998,
+    "suggestedShares": 200,
+    "positionCost": 223150.19999999998,
+    "expectedLoss": 9150.199999999995,
     "recentHigh20": 1215,
     "takeProfit1": 1215,
     "riskR": 45.750999999999976,
@@ -5113,9 +5377,9 @@
     "entryPrice": 2878.1189999999997,
     "entryUpperPrice": 2906.757,
     "stopLoss": 2835,
-    "suggestedShares": 100,
-    "positionCost": 287811.89999999997,
-    "expectedLoss": 4311.899999999969,
+    "suggestedShares": 200,
+    "positionCost": 575623.7999999999,
+    "expectedLoss": 8623.799999999937,
     "recentHigh20": 3108,
     "takeProfit1": 3108,
     "riskR": 43.11899999999969,
@@ -5205,9 +5469,9 @@
     "entryPrice": 1874.0234999999998,
     "entryUpperPrice": 1892.6705,
     "stopLoss": 1844.5,
-    "suggestedShares": 100,
-    "positionCost": 187402.34999999998,
-    "expectedLoss": 2952.3499999999785,
+    "suggestedShares": 400,
+    "positionCost": 749609.3999999999,
+    "expectedLoss": 11809.399999999914,
     "recentHigh20": 2110,
     "takeProfit1": 2110,
     "riskR": 29.523499999999785,
@@ -5389,9 +5653,9 @@
     "entryPrice": 148.05659999999997,
     "entryUpperPrice": 149.52979999999997,
     "stopLoss": 146.8,
-    "suggestedShares": 100,
-    "positionCost": 14805.659999999998,
-    "expectedLoss": 125.65999999999633,
+    "suggestedShares": 9500,
+    "positionCost": 1406537.6999999997,
+    "expectedLoss": 11937.699999999651,
     "recentHigh20": 156.9,
     "takeProfit1": 156.9,
     "riskR": 1.2565999999999633,
@@ -5481,9 +5745,9 @@
     "entryPrice": 859.5563999999999,
     "entryUpperPrice": 868.1092,
     "stopLoss": 848.4,
-    "suggestedShares": 100,
-    "positionCost": 85955.64,
-    "expectedLoss": 1115.6399999999962,
+    "suggestedShares": 1000,
+    "positionCost": 859556.3999999999,
+    "expectedLoss": 11156.399999999961,
     "recentHigh20": 939.9,
     "takeProfit1": 939.9,
     "riskR": 11.156399999999962,
@@ -5513,6 +5777,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 40"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.97 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -5573,9 +5843,9 @@
     "entryPrice": 999.2312999999999,
     "entryUpperPrice": 1009.1738999999999,
     "stopLoss": 989.6,
-    "suggestedShares": 100,
-    "positionCost": 99923.12999999999,
-    "expectedLoss": 963.1299999999896,
+    "suggestedShares": 1200,
+    "positionCost": 1199077.5599999998,
+    "expectedLoss": 11557.559999999876,
     "recentHigh20": 1077,
     "takeProfit1": 1077,
     "riskR": 9.631299999999896,
@@ -5605,6 +5875,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 40"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.90 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -5665,9 +5941,9 @@
     "entryPrice": 921.1226999999999,
     "entryUpperPrice": 930.2880999999999,
     "stopLoss": 909.3,
-    "suggestedShares": 100,
-    "positionCost": 92112.26999999999,
-    "expectedLoss": 1182.269999999994,
+    "suggestedShares": 1000,
+    "positionCost": 921122.7,
+    "expectedLoss": 11822.69999999994,
     "recentHigh20": 1024,
     "takeProfit1": 1024,
     "riskR": 11.82269999999994,
@@ -5757,9 +6033,9 @@
     "entryPrice": 8098.490999999999,
     "entryUpperPrice": 8179.072999999999,
     "stopLoss": 7363,
-    "suggestedShares": 100,
-    "positionCost": 809849.0999999999,
-    "expectedLoss": 73549.0999999999,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 9074,
     "takeProfit1": 9074,
     "riskR": 735.4909999999991,
@@ -5776,7 +6052,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "73549円 / 上限 12,000円"
+        "detail": "1株リスク 735円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -5795,6 +6071,12 @@
         "label": "25日線乖離率が大きく過熱気味",
         "passed": false,
         "detail": "25日線乖離 13.48%"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.89 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -5859,9 +6141,9 @@
     "entryPrice": 27052.589999999997,
     "entryUpperPrice": 27321.769999999997,
     "stopLoss": 27160,
-    "suggestedShares": 100,
-    "positionCost": 2705258.9999999995,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 30580,
     "takeProfit1": 30580,
     "riskR": null,
@@ -5891,6 +6173,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 35"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.93 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -5942,9 +6230,9 @@
     "entryPrice": 68633.45999999999,
     "entryUpperPrice": 69316.37999999999,
     "stopLoss": 68080,
-    "suggestedShares": 100,
-    "positionCost": 6863345.999999999,
-    "expectedLoss": 55345.999999999185,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 76010,
     "takeProfit1": 76010,
     "riskR": 553.4599999999919,
@@ -5973,13 +6261,25 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "55346円 / 上限 12,000円"
+        "detail": "1株リスク 553円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 30"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 553円 = 0.16 ATR / 最低 0.3 ATR"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.17 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -6031,9 +6331,9 @@
     "entryPrice": 4796.664,
     "entryUpperPrice": 4844.392,
     "stopLoss": 4742,
-    "suggestedShares": 100,
-    "positionCost": 479666.39999999997,
-    "expectedLoss": 5466.399999999976,
+    "suggestedShares": 200,
+    "positionCost": 959332.7999999999,
+    "expectedLoss": 10932.799999999952,
     "recentHigh20": 7026,
     "takeProfit1": 7026,
     "riskR": 54.66399999999976,
@@ -6069,6 +6369,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 25"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 55円 = 0.14 ATR / 最低 0.3 ATR"
       }
     ],
     "intradayMemo": [
@@ -6120,9 +6426,9 @@
     "entryPrice": 4320.294,
     "entryUpperPrice": 4363.282,
     "stopLoss": 4052,
-    "suggestedShares": 100,
-    "positionCost": 432029.39999999997,
-    "expectedLoss": 26829.399999999987,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 5634,
     "takeProfit1": 5634,
     "riskR": 268.29399999999987,
@@ -6145,7 +6451,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "26829円 / 上限 12,000円"
+        "detail": "1株リスク 268円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
@@ -6203,9 +6509,9 @@
     "entryPrice": 65230.52999999999,
     "entryUpperPrice": 65879.59,
     "stopLoss": 64120,
-    "suggestedShares": 100,
-    "positionCost": 6523052.999999999,
-    "expectedLoss": 111052.99999999916,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 86800,
     "takeProfit1": 86800,
     "riskR": 1110.5299999999916,
@@ -6228,7 +6534,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "111053円 / 上限 12,000円"
+        "detail": "1株リスク 1111円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -6297,9 +6603,9 @@
     "entryPrice": 13206.704999999998,
     "entryUpperPrice": 13338.114999999998,
     "stopLoss": 12765,
-    "suggestedShares": 100,
-    "positionCost": 1320670.4999999998,
-    "expectedLoss": 44170.49999999981,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 18870,
     "takeProfit1": 18870,
     "riskR": 441.7049999999981,
@@ -6322,7 +6628,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "44170円 / 上限 12,000円"
+        "detail": "1株リスク 442円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -6391,9 +6697,9 @@
     "entryPrice": 5567.298,
     "entryUpperPrice": 5622.6939999999995,
     "stopLoss": 5410,
-    "suggestedShares": 100,
-    "positionCost": 556729.7999999999,
-    "expectedLoss": 15729.799999999977,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 6751,
     "takeProfit1": 6751,
     "riskR": 157.29799999999977,
@@ -6416,7 +6722,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15730円 / 上限 12,000円"
+        "detail": "1株リスク 157円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -6485,9 +6791,9 @@
     "entryPrice": 6058.139999999999,
     "entryUpperPrice": 6118.419999999999,
     "stopLoss": 5908,
-    "suggestedShares": 100,
-    "positionCost": 605814,
-    "expectedLoss": 15013.999999999942,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 6686,
     "takeProfit1": 6686,
     "riskR": 150.13999999999942,
@@ -6510,7 +6816,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15014円 / 上限 12,000円"
+        "detail": "1株リスク 150円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -6579,9 +6885,9 @@
     "entryPrice": 2589.1814999999997,
     "entryUpperPrice": 2614.9445,
     "stopLoss": 2452,
-    "suggestedShares": 100,
-    "positionCost": 258918.14999999997,
-    "expectedLoss": 13718.149999999969,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 3098,
     "takeProfit1": 3098,
     "riskR": 137.1814999999997,
@@ -6604,7 +6910,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "13718円 / 上限 12,000円"
+        "detail": "1株リスク 137円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -6617,6 +6923,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 25"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.94 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -6673,9 +6985,9 @@
     "entryPrice": 776.2016999999998,
     "entryUpperPrice": 783.9250999999998,
     "stopLoss": 761.8,
-    "suggestedShares": 100,
-    "positionCost": 77620.16999999998,
-    "expectedLoss": 1440.1699999999892,
+    "suggestedShares": 800,
+    "positionCost": 620961.3599999999,
+    "expectedLoss": 11521.359999999913,
     "recentHigh20": 814.3,
     "takeProfit1": 814.3,
     "riskR": 14.401699999999892,
@@ -6765,9 +7077,9 @@
     "entryPrice": 3819.4019999999996,
     "entryUpperPrice": 3857.4059999999995,
     "stopLoss": 3836,
-    "suggestedShares": 100,
-    "positionCost": 381940.19999999995,
-    "expectedLoss": 0,
+    "suggestedShares": null,
+    "positionCost": null,
+    "expectedLoss": null,
     "recentHigh20": 5828,
     "takeProfit1": 5828,
     "riskR": null,
@@ -6863,9 +7175,9 @@
     "entryPrice": 4784.603999999999,
     "entryUpperPrice": 4832.2119999999995,
     "stopLoss": 4610,
-    "suggestedShares": 100,
-    "positionCost": 478460.3999999999,
-    "expectedLoss": 17460.399999999936,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 7933,
     "takeProfit1": 7933,
     "riskR": 174.60399999999936,
@@ -6888,7 +7200,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "17460円 / 上限 12,000円"
+        "detail": "1株リスク 175円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -6961,9 +7273,9 @@
     "entryPrice": 6058.139999999999,
     "entryUpperPrice": 6118.419999999999,
     "stopLoss": 5908,
-    "suggestedShares": 100,
-    "positionCost": 605814,
-    "expectedLoss": 15013.999999999942,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 6686,
     "takeProfit1": 6686,
     "riskR": 150.13999999999942,
@@ -6986,7 +7298,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "15014円 / 上限 12,000円"
+        "detail": "1株リスク 150円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -7059,9 +7371,9 @@
     "entryPrice": 1614.9344999999998,
     "entryUpperPrice": 1631.0035,
     "stopLoss": 1598,
-    "suggestedShares": 100,
-    "positionCost": 161493.44999999998,
-    "expectedLoss": 1693.4499999999844,
+    "suggestedShares": 700,
+    "positionCost": 1130454.15,
+    "expectedLoss": 11854.14999999989,
     "recentHigh20": 1849.5,
     "takeProfit1": 1849.5,
     "riskR": 16.934499999999844,
@@ -7103,6 +7415,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 25"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.10 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -7163,9 +7481,9 @@
     "entryPrice": 7024.346999999999,
     "entryUpperPrice": 7094.240999999999,
     "stopLoss": 6795,
-    "suggestedShares": 100,
-    "positionCost": 702434.6999999998,
-    "expectedLoss": 22934.699999999884,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 7857,
     "takeProfit1": 7857,
     "riskR": 229.34699999999884,
@@ -7182,7 +7500,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "22935円 / 上限 12,000円"
+        "detail": "1株リスク 229円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -7251,9 +7569,9 @@
     "entryPrice": 3057.6119999999996,
     "entryUpperPrice": 3088.0359999999996,
     "stopLoss": 2600,
-    "suggestedShares": 100,
-    "positionCost": 305761.19999999995,
-    "expectedLoss": 45761.19999999996,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 4485,
     "takeProfit1": 4485,
     "riskR": 457.6119999999996,
@@ -7270,7 +7588,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "45761円 / 上限 12,000円"
+        "detail": "1株リスク 458円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -7283,6 +7601,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 20"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.12 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -7343,9 +7667,9 @@
     "entryPrice": 48547.52999999999,
     "entryUpperPrice": 49030.59,
     "stopLoss": 45100,
-    "suggestedShares": 100,
-    "positionCost": 4854752.999999999,
-    "expectedLoss": 344752.9999999992,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 57700,
     "takeProfit1": 57700,
     "riskR": 3447.5299999999916,
@@ -7362,7 +7686,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "344753円 / 上限 12,000円"
+        "detail": "1株リスク 3448円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -7435,9 +7759,9 @@
     "entryPrice": 10208.588999999998,
     "entryUpperPrice": 10310.166999999998,
     "stopLoss": 9710,
-    "suggestedShares": 100,
-    "positionCost": 1020858.8999999998,
-    "expectedLoss": 49858.89999999981,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 12380,
     "takeProfit1": 12380,
     "riskR": 498.5889999999981,
@@ -7454,7 +7778,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "49859円 / 上限 12,000円"
+        "detail": "1株リスク 499円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -7527,9 +7851,9 @@
     "entryPrice": 51514.28999999999,
     "entryUpperPrice": 52026.869999999995,
     "stopLoss": 50050,
-    "suggestedShares": 100,
-    "positionCost": 5151428.999999999,
-    "expectedLoss": 146428.99999999936,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 62410,
     "takeProfit1": 62410,
     "riskR": 1464.2899999999936,
@@ -7546,7 +7870,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "146429円 / 上限 12,000円"
+        "detail": "1株リスク 1464円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -7663,6 +7987,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.96 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -7719,9 +8049,9 @@
     "entryPrice": 361.7597999999999,
     "entryUpperPrice": 365.35939999999994,
     "stopLoss": 350.5,
-    "suggestedShares": 100,
-    "positionCost": 36175.979999999996,
-    "expectedLoss": 1125.9799999999927,
+    "suggestedShares": 1000,
+    "positionCost": 361759.79999999993,
+    "expectedLoss": 11259.799999999927,
     "recentHigh20": 417.3,
     "takeProfit1": 417.3,
     "riskR": 11.259799999999927,
@@ -7751,6 +8081,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.88 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -7903,9 +8239,9 @@
     "entryPrice": 416.45189999999997,
     "entryUpperPrice": 420.59569999999997,
     "stopLoss": 397.4,
-    "suggestedShares": 100,
-    "positionCost": 41645.189999999995,
-    "expectedLoss": 1905.189999999999,
+    "suggestedShares": 600,
+    "positionCost": 249871.13999999998,
+    "expectedLoss": 11431.139999999994,
     "recentHigh20": 453.8,
     "takeProfit1": 453.8,
     "riskR": 19.05189999999999,
@@ -7935,6 +8271,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 1.05 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -7995,9 +8337,9 @@
     "entryPrice": 953.5439999999999,
     "entryUpperPrice": 963.0319999999998,
     "stopLoss": 922,
-    "suggestedShares": 100,
-    "positionCost": 95354.4,
-    "expectedLoss": 3154.399999999987,
+    "suggestedShares": 300,
+    "positionCost": 286063.19999999995,
+    "expectedLoss": 9463.19999999996,
     "recentHigh20": 1299,
     "takeProfit1": 1299,
     "riskR": 31.54399999999987,
@@ -8223,6 +8565,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.96 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -8283,9 +8631,9 @@
     "entryPrice": 4991.433,
     "entryUpperPrice": 5041.099,
     "stopLoss": 4947,
-    "suggestedShares": 100,
-    "positionCost": 499143.3,
-    "expectedLoss": 4443.299999999999,
+    "suggestedShares": 200,
+    "positionCost": 998286.6,
+    "expectedLoss": 8886.599999999999,
     "recentHigh20": 6078,
     "takeProfit1": 6078,
     "riskR": 44.43299999999999,
@@ -8327,6 +8675,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "stop_too_tight",
+        "label": "損切りラインが近すぎる（ノイズ域）",
+        "passed": false,
+        "detail": "損切り幅 44円 = 0.26 ATR / 最低 0.3 ATR"
       }
     ],
     "intradayMemo": [
@@ -8387,9 +8741,9 @@
     "entryPrice": 216.67799999999997,
     "entryUpperPrice": 218.83399999999997,
     "stopLoss": 213.2,
-    "suggestedShares": 100,
-    "positionCost": 21667.799999999996,
-    "expectedLoss": 347.799999999998,
+    "suggestedShares": 3400,
+    "positionCost": 736705.1999999998,
+    "expectedLoss": 11825.199999999933,
     "recentHigh20": 229.9,
     "takeProfit1": 229.9,
     "riskR": 3.47799999999998,
@@ -8419,6 +8773,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.91 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -8479,9 +8839,9 @@
     "entryPrice": 555.0011999999999,
     "entryUpperPrice": 560.5236,
     "stopLoss": 536,
-    "suggestedShares": 100,
-    "positionCost": 55500.119999999995,
-    "expectedLoss": 1900.1199999999926,
+    "suggestedShares": 600,
+    "positionCost": 333000.72,
+    "expectedLoss": 11400.719999999956,
     "recentHigh20": 663,
     "takeProfit1": 663,
     "riskR": 19.001199999999926,
@@ -8511,6 +8871,12 @@
         "label": "個別押し目スコアが買い基準未満",
         "passed": false,
         "detail": "個別スコア 15"
+      },
+      {
+        "key": "volume_not_dry",
+        "label": "押し目中も出来高が減っていない",
+        "passed": false,
+        "detail": "直近3日出来高/20日平均 = 0.96 / 基準 0.85 以下"
       }
     ],
     "intradayMemo": [
@@ -8571,9 +8937,9 @@
     "entryPrice": 15442.829999999998,
     "entryUpperPrice": 15596.489999999998,
     "stopLoss": 14890,
-    "suggestedShares": 100,
-    "positionCost": 1544282.9999999998,
-    "expectedLoss": 55282.99999999981,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 19570,
     "takeProfit1": 19570,
     "riskR": 552.8299999999981,
@@ -8596,7 +8962,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "55283円 / 上限 12,000円"
+        "detail": "1株リスク 553円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -8669,9 +9035,9 @@
     "entryPrice": 3555.6899999999996,
     "entryUpperPrice": 3591.0699999999997,
     "stopLoss": 3420,
-    "suggestedShares": 100,
-    "positionCost": 355568.99999999994,
-    "expectedLoss": 13568.99999999996,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 4480,
     "takeProfit1": 4480,
     "riskR": 135.6899999999996,
@@ -8706,7 +9072,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "13569円 / 上限 12,000円"
+        "detail": "1株リスク 136円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "individual_score_low",
@@ -8764,9 +9130,9 @@
     "entryPrice": 5684.28,
     "entryUpperPrice": 5740.839999999999,
     "stopLoss": 5360,
-    "suggestedShares": 100,
-    "positionCost": 568428,
-    "expectedLoss": 32427.999999999975,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 8520,
     "takeProfit1": 8520,
     "riskR": 324.27999999999975,
@@ -8801,7 +9167,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "32428円 / 上限 12,000円"
+        "detail": "1株リスク 324円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -8870,9 +9236,9 @@
     "entryPrice": 2942.8409999999994,
     "entryUpperPrice": 2972.1229999999996,
     "stopLoss": 2813,
-    "suggestedShares": 100,
-    "positionCost": 294284.0999999999,
-    "expectedLoss": 12984.099999999944,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 3250,
     "takeProfit1": 3250,
     "riskR": 129.84099999999944,
@@ -8895,7 +9261,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "12984円 / 上限 12,000円"
+        "detail": "1株リスク 130円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
@@ -8968,9 +9334,9 @@
     "entryPrice": 8863.898999999998,
     "entryUpperPrice": 8952.096999999998,
     "stopLoss": 8617,
-    "suggestedShares": 100,
-    "positionCost": 886389.8999999998,
-    "expectedLoss": 24689.89999999976,
+    "suggestedShares": 0,
+    "positionCost": 0,
+    "expectedLoss": 0,
     "recentHigh20": 11180,
     "takeProfit1": 11180,
     "riskR": 246.8989999999976,
@@ -8993,7 +9359,7 @@
         "key": "expected_loss_too_large",
         "label": "想定損失が大きすぎる",
         "passed": false,
-        "detail": "24690円 / 上限 12,000円"
+        "detail": "1株リスク 247円 × 最低100株 が上限 12,000円 を超過"
       },
       {
         "key": "theme_weak",
