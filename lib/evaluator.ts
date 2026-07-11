@@ -1,4 +1,4 @@
-import { deviation, max, movingAverageAt, rateOfChangeAt, trendFrom } from "./indicators";
+import { averageTrueRangeAt, deviation, max, movingAverageAt, rateOfChangeAt, trendFrom } from "./indicators";
 import { scoreIndividual, scoreTheme, themeStatus } from "./scoring";
 import {
   CandidateResult,
@@ -24,6 +24,8 @@ type CandidateDraft = Omit<CandidateResult, "themeScore" | "themeRank" | "status
     ma5TrendUpOrFlat: boolean;
     yearHighDeviationInRange: boolean;
     expectedLossWithinLimit: boolean;
+    stopNotTooTight: boolean;
+    volumeDryUp: boolean;
   };
 };
 
@@ -111,10 +113,19 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
   const entryPrice = ma5 === null ? null : ma5 * (1 + rules.entryMaPremium);
   const entryUpperPrice = ma5 === null ? null : ma5 * (1 + rules.entryUpperPremium);
   const stopLoss = previous.low;
-  const expectedLoss = entryPrice === null ? null : Math.max(0, (entryPrice - stopLoss) * rules.defaultShares);
+  const riskR = entryPrice !== null && stopLoss !== null && entryPrice > stopLoss ? entryPrice - stopLoss : null;
+  const atr = averageTrueRangeAt(prices, latestIndex, rules.atrPeriod);
+  const stopDistanceAtr = atr !== null && atr > 0 && riskR !== null ? riskR / atr : null;
+  const volumes = prices.map((row) => row.volume);
+  const volumeShortAvg = movingAverageAt(volumes, latestIndex, rules.volumeShortWindow);
+  const volumeLongAvg = movingAverageAt(volumes, latestIndex, rules.volumeLongWindow);
+  const volumeRatio =
+    volumeShortAvg !== null && volumeLongAvg !== null && volumeLongAvg > 0 ? volumeShortAvg / volumeLongAvg : null;
+  const suggestedShares = suggestedSharesFor(entryPrice, riskR, rules);
+  const positionCost = entryPrice !== null && suggestedShares !== null ? entryPrice * suggestedShares : null;
+  const expectedLoss = expectedLossFor(entryPrice, stopLoss, riskR, suggestedShares, rules);
   const recentHigh20 = max(highs.slice(-rules.recentHighLookback));
   const takeProfit1 = recentHigh20;
-  const riskR = entryPrice !== null && stopLoss !== null && entryPrice > stopLoss ? entryPrice - stopLoss : null;
   const reward = takeProfit1 !== null && entryPrice !== null ? takeProfit1 - entryPrice : null;
   const rewardR = riskR !== null && riskR > 0 && reward !== null ? reward / riskR : null;
 
@@ -130,7 +141,10 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
       yearHighDeviation !== null &&
       yearHighDeviation >= rules.yearHighDeviationMin &&
       yearHighDeviation <= rules.yearHighDeviationMax,
-    expectedLossWithinLimit: expectedLoss !== null && expectedLoss > 0 && expectedLoss <= rules.maxLossYen
+    expectedLossWithinLimit: expectedLoss !== null && expectedLoss > 0 && expectedLoss <= rules.maxLossYen,
+    // 測定不能(null)は罰しない。フラグ・除外は明確な違反時のみ
+    stopNotTooTight: stopDistanceAtr === null || stopDistanceAtr >= rules.stopAtrMinMultiple,
+    volumeDryUp: volumeRatio === null || volumeRatio <= rules.volumeDryUpMaxRatio
   };
 
   const individualScore = scoreIndividual(
@@ -162,10 +176,17 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
     previousLow: previous.low,
     return5d: rateOfChangeAt(closes, latestIndex, 5),
     return20d: rateOfChangeAt(closes, latestIndex, 20),
+    atr,
+    stopDistanceAtr,
+    volumeShortAvg,
+    volumeLongAvg,
+    volumeRatio,
     individualScore,
     entryPrice,
     entryUpperPrice,
     stopLoss,
+    suggestedShares,
+    positionCost,
     expectedLoss,
     recentHigh20,
     takeProfit1,
@@ -176,6 +197,47 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
     intradayMemo: intradayMemoFor(rules),
     conditions
   };
+}
+
+/**
+ * リスクベース建玉: リスク許容額(と任意の投入額上限)から株数を逆算する。
+ * lotSize=100・maxPositionYen=null では「(entry-stop)×100株 ≤ maxLossYen」と同値になり、
+ * fixedモードと候補の選別結果が一致する(パリティ。tests/evaluator.test.tsで保証)。
+ */
+export function suggestedSharesFor(entryPrice: number | null, riskR: number | null, rules: Rules): number | null {
+  if (rules.sizingMode === "fixed") {
+    return rules.defaultShares;
+  }
+
+  if (entryPrice === null || riskR === null || riskR <= 0) {
+    return null;
+  }
+
+  let raw = rules.maxLossYen / riskR;
+  if (rules.maxPositionYen !== null) {
+    raw = Math.min(raw, rules.maxPositionYen / entryPrice);
+  }
+
+  return rules.allowFractionalShares ? Math.floor(raw) : Math.floor(raw / rules.lotSize) * rules.lotSize;
+}
+
+/** riskモードは推奨株数での損失額(株数0なら0=条件未達)。fixedモードは従来どおりdefaultShares固定 */
+export function expectedLossFor(
+  entryPrice: number | null,
+  stopLoss: number,
+  riskR: number | null,
+  suggestedShares: number | null,
+  rules: Rules
+): number | null {
+  if (rules.sizingMode === "fixed") {
+    return entryPrice === null ? null : Math.max(0, (entryPrice - stopLoss) * rules.defaultShares);
+  }
+
+  if (riskR === null || suggestedShares === null) {
+    return null;
+  }
+
+  return riskR * suggestedShares;
 }
 
 function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules): CandidateDraft {
@@ -203,10 +265,17 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
     previousLow: null,
     return5d: null,
     return20d: null,
+    atr: null,
+    stopDistanceAtr: null,
+    volumeShortAvg: null,
+    volumeLongAvg: null,
+    volumeRatio: null,
     individualScore: 0,
     entryPrice: null,
     entryUpperPrice: null,
     stopLoss: null,
+    suggestedShares: null,
+    positionCost: null,
     expectedLoss: null,
     recentHigh20: null,
     takeProfit1: null,
@@ -221,7 +290,10 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
       ma5DeviationInRange: false,
       ma5TrendUpOrFlat: false,
       yearHighDeviationInRange: false,
-      expectedLossWithinLimit: false
+      expectedLossWithinLimit: false,
+      // 測定不能は罰しない(null→true と同じ扱い)
+      stopNotTooTight: true,
+      volumeDryUp: true
     }
   };
 }
@@ -330,8 +402,13 @@ function reasonsForCandidate(
     return reasons;
   }
 
+  const qualityFlags = qualityFlagReasons(draft, rules);
+
   if (status === "buy_candidate") {
-    return [reason("buy_setup_ready", "買い候補条件を満たしている", true, "個別スコアとテーマ資金スコアが買い基準以上")];
+    return [
+      reason("buy_setup_ready", "買い候補条件を満たしている", true, "個別スコアとテーマ資金スコアが買い基準以上"),
+      ...qualityFlags
+    ];
   }
 
   if (draft.ma25Trend === "down") {
@@ -415,6 +492,30 @@ function reasonsForCandidate(
     );
   }
 
+  // riskモードでは株数0(=最低単位でも制約超過)が「想定損失が大きすぎる」に相当する
+  if (rules.sizingMode === "risk" && draft.suggestedShares !== null && draft.suggestedShares <= 0 && draft.riskR !== null) {
+    const minShares = rules.allowFractionalShares ? 1 : rules.lotSize;
+    if (draft.riskR * minShares > rules.maxLossYen) {
+      reasons.push(
+        reason(
+          "expected_loss_too_large",
+          "想定損失が大きすぎる",
+          false,
+          `1株リスク ${draft.riskR.toFixed(0)}円 × 最低${minShares}株 が上限 ${rules.maxLossYen.toLocaleString("ja-JP")}円 を超過`
+        )
+      );
+    } else if (draft.entryPrice !== null && rules.maxPositionYen !== null) {
+      reasons.push(
+        reason(
+          "position_cost_too_large",
+          "投入額が上限を超過",
+          false,
+          `買い基準 ${draft.entryPrice.toFixed(0)}円 × 最低${minShares}株 が上限 ${rules.maxPositionYen.toLocaleString("ja-JP")}円 を超過`
+        )
+      );
+    }
+  }
+
   if (themeScoreValue < rules.themeWatchScoreThreshold) {
     reasons.push(reason("theme_weak", "テーマ資金が弱い", false, `テーマ資金スコア ${themeScoreValue}`));
   } else if (themeScoreValue < rules.themeBuyScoreThreshold) {
@@ -458,11 +559,47 @@ function reasonsForCandidate(
     );
   }
 
+  reasons.push(...qualityFlags);
+
   if (status === "watch" && reasons.length === 0) {
     reasons.push(reason("watch_conditions_pending", "監視継続", true, "買い候補条件が揃うまで追いかけない"));
   }
 
   return uniqueReasons(reasons);
+}
+
+/** 品質フィルター(flag/exclude)の警告理由。条件がfalseなら測定値は非null(null→条件true)だが、型の絞り込みのため個別に確認する */
+function qualityFlagReasons(draft: CandidateDraft, rules: Rules): RuleReason[] {
+  const flags: RuleReason[] = [];
+
+  if (
+    rules.stopTightFilterMode !== "off" &&
+    !draft.conditions.stopNotTooTight &&
+    draft.stopDistanceAtr !== null &&
+    draft.riskR !== null
+  ) {
+    flags.push(
+      reason(
+        "stop_too_tight",
+        "損切りラインが近すぎる（ノイズ域）",
+        false,
+        `損切り幅 ${draft.riskR.toFixed(0)}円 = ${draft.stopDistanceAtr.toFixed(2)} ATR / 最低 ${rules.stopAtrMinMultiple} ATR`
+      )
+    );
+  }
+
+  if (rules.volumeFilterMode !== "off" && !draft.conditions.volumeDryUp && draft.volumeRatio !== null) {
+    flags.push(
+      reason(
+        "volume_not_dry",
+        "押し目中も出来高が減っていない",
+        false,
+        `直近${rules.volumeShortWindow}日出来高/20日平均 = ${draft.volumeRatio.toFixed(2)} / 基準 ${rules.volumeDryUpMaxRatio} 以下`
+      )
+    );
+  }
+
+  return flags;
 }
 
 function reason(key: string, label: string, passed: boolean, detail: string): RuleReason {
@@ -540,7 +677,12 @@ function classifyCandidate(draft: CandidateDraft, themeScoreValue: number, rules
   const rewardSufficient = draft.rewardR === null || draft.rewardR >= rules.minRewardR;
 
   if (individualBuy && themeBuy && draft.expectedLoss <= rules.maxLossYen && rewardSufficient) {
-    return "buy_candidate";
+    // 品質フィルター(excludeモード時のみ): シナリオ崩壊ではなく押し目の質の問題なので avoid ではなく watch に降格
+    const qualityExcluded =
+      (rules.stopTightFilterMode === "exclude" && !draft.conditions.stopNotTooTight) ||
+      (rules.volumeFilterMode === "exclude" && !draft.conditions.volumeDryUp);
+
+    return qualityExcluded ? "watch" : "buy_candidate";
   }
 
   if (individualBuy && themeBuy && draft.expectedLoss <= rules.maxLossYen && !rewardSufficient) {

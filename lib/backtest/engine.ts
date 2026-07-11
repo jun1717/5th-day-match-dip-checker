@@ -1,4 +1,4 @@
-import { evaluateCandidates } from "../evaluator";
+import { evaluateCandidates, suggestedSharesFor } from "../evaluator";
 import { CandidateResult, CandidateStatus, ExitMode, PriceRow, Rules, WatchlistRow } from "../types";
 import { SimulatedTrade, simulateTrade, StopMode } from "./simulate";
 
@@ -29,6 +29,9 @@ export interface TradeRecord {
   themeScore: number;
   exitMode: ExitMode;
   rewardR: number | null;
+  stopDistanceAtr: number | null;
+  volumeRatio: number | null;
+  shares: number;
   trade: SimulatedTrade;
 }
 
@@ -39,6 +42,8 @@ export interface CohortRecord {
   individualScore: number;
   themeScore: number;
   reasonKeys: string[];
+  stopDistanceAtr: number | null;
+  volumeRatio: number | null;
   fwd5: number | null;
   fwd20: number | null;
 }
@@ -125,6 +130,40 @@ export function runBacktest(
         continue;
       }
 
+      // riskモードの株数は「エントリー時に実際に使う損切り(stopUsed)」の幅で決める。
+      // シグナル時のsuggestedSharesはlow(D-1)基準のため、stopMode=prev-day(stop=low(D))では
+      // 実リスクとずれ、押しの深い日ほど1トレードのリスクがmaxLossYenを大きく超えてしまう。
+      const stopForSizing = options.stopMode === "prev-day" ? series.rows[series.ptr].low : candidate.stopLoss;
+      const entryRiskR = candidate.entryPrice > stopForSizing ? candidate.entryPrice - stopForSizing : null;
+      let shares = rules.defaultShares;
+      if (rules.sizingMode === "risk") {
+        const sized = suggestedSharesFor(candidate.entryPrice, entryRiskR, rules);
+        if (sized !== null && sized <= 0) {
+          // 1単元でも予算超過 → ドクトリン(想定損失上限)に従いエントリーしない
+          trades.push({
+            signalDate: day,
+            code: candidate.code,
+            name: candidate.name,
+            theme: candidate.theme,
+            status: candidate.status,
+            individualScore: candidate.individualScore,
+            themeScore: candidate.themeScore,
+            exitMode: candidate.exitMode,
+            rewardR: candidate.rewardR,
+            stopDistanceAtr: candidate.stopDistanceAtr,
+            volumeRatio: candidate.volumeRatio,
+            shares: 0,
+            trade: { filled: false, noFillReason: "risk_over_budget", stopUsed: stopForSizing }
+          });
+          continue;
+        }
+
+        if (sized !== null) {
+          shares = sized;
+        }
+        // sized === null (stop >= entry) は simulateTrade が stop_at_or_above_entry でno-fillにする
+      }
+
       const trade = simulateTrade({
         signal: {
           entryPrice: candidate.entryPrice,
@@ -136,7 +175,7 @@ export function runBacktest(
         signalDayLow: series.rows[series.ptr].low,
         forwardBars: series.rows.slice(series.ptr + 1),
         closesUpToSignal: series.closes.slice(Math.max(0, series.ptr - TRAIL_CLOSES_LOOKBACK + 1), series.ptr + 1),
-        options: { maxHoldDays: options.maxHoldDays, stopMode: options.stopMode, shares: rules.defaultShares }
+        options: { maxHoldDays: options.maxHoldDays, stopMode: options.stopMode, shares }
       });
 
       if (trade.filled && trade.exitDate !== undefined) {
@@ -153,6 +192,9 @@ export function runBacktest(
         themeScore: candidate.themeScore,
         exitMode: candidate.exitMode,
         rewardR: candidate.rewardR,
+        stopDistanceAtr: candidate.stopDistanceAtr,
+        volumeRatio: candidate.volumeRatio,
+        shares,
         trade
       });
     }
@@ -236,6 +278,8 @@ function cohortRecord(candidate: CandidateResult, series: CodeSeries, day: strin
     individualScore: candidate.individualScore,
     themeScore: candidate.themeScore,
     reasonKeys: candidate.reasons.map((reason) => reason.key),
+    stopDistanceAtr: candidate.stopDistanceAtr,
+    volumeRatio: candidate.volumeRatio,
     fwd5: forwardReturn(series, 5),
     fwd20: forwardReturn(series, 20)
   };

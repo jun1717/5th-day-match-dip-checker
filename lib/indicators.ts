@@ -1,4 +1,4 @@
-import { Trend } from "./types";
+import { PriceRow, Trend } from "./types";
 
 export function movingAverageAt(values: number[], endIndex: number, window: number): number | null {
   const startIndex = endIndex - window + 1;
@@ -42,6 +42,26 @@ export function trendFrom(current: number | null, previous: number | null, toler
   }
 
   return delta > 0 ? "up" : "down";
+}
+
+/**
+ * True Range = max(high-low, |high-prevClose|, |low-prevClose|) の直近period本の単純平均。
+ * prevCloseが必要なため endIndex-period >= 0 でなければ null(必要行数 = period+1)。
+ * rowsはdate昇順前提。場中は当日行が部分バーのため当日TRは小さめに出る(確定判定は大引け後スナップショット)。
+ */
+export function averageTrueRangeAt(rows: PriceRow[], endIndex: number, period: number): number | null {
+  if (period <= 0 || endIndex - period < 0 || endIndex >= rows.length) {
+    return null;
+  }
+
+  let total = 0;
+  for (let index = endIndex - period + 1; index <= endIndex; index += 1) {
+    const bar = rows[index];
+    const prevClose = rows[index - 1].close;
+    total += Math.max(bar.high - bar.low, Math.abs(bar.high - prevClose), Math.abs(bar.low - prevClose));
+  }
+
+  return total / period;
 }
 
 export function deviation(value: number | null, basis: number | null): number | null {

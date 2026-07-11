@@ -30,6 +30,7 @@ type SortKey =
   | "entryPrice"
   | "entryUpperPrice"
   | "stopLoss"
+  | "suggestedShares"
   | "expectedLoss"
   | "takeProfit1"
   | "rewardR";
@@ -94,6 +95,7 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
               <SortableHeader label="買い基準価格" sortKey="entryPrice" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="買い上限価格" sortKey="entryUpperPrice" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="損切りライン" sortKey="stopLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="株数" sortKey="suggestedShares" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="想定損失" sortKey="expectedLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="第1利確ライン" sortKey="takeProfit1" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="リワードR" sortKey="rewardR" currentKey={sortKey} direction={direction} onSort={updateSort} />
@@ -132,6 +134,7 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
                 <td className="text-right">{formatNumber(candidate.entryPrice)}</td>
                 <td className="text-right">{formatNumber(candidate.entryUpperPrice)}</td>
                 <td className="text-right">{formatNumber(candidate.stopLoss)}</td>
+                <td className="text-right">{formatNumber(candidate.suggestedShares)}</td>
                 <td className="text-right">
                   <span className={candidate.expectedLoss !== null && candidate.expectedLoss > maxLossYen ? "badge danger" : ""}>
                     {formatYen(candidate.expectedLoss)}

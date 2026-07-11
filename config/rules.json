@@ -30,6 +30,17 @@
   "bbMinTouchCount": 3,
   "bbTimingGoodSuccessRate": 0.6,
   "bbThemeScoreThreshold": 60,
+  "atrPeriod": 14,
+  "stopAtrMinMultiple": 0.3,
+  "stopTightFilterMode": "off",
+  "sizingMode": "fixed",
+  "lotSize": 100,
+  "allowFractionalShares": false,
+  "maxPositionYen": null,
+  "volumeShortWindow": 3,
+  "volumeLongWindow": 20,
+  "volumeDryUpMaxRatio": 0.85,
+  "volumeFilterMode": "off",
   "scoring": {
     "individual": {
       "ma25TrendUp": 20,

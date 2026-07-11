@@ -160,7 +160,12 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
             <Detail label="買い基準価格" value={formatNumber(primary.entryPrice)} />
             <Detail label="買い上限価格" value={formatNumber(primary.entryUpperPrice)} />
             <Detail label="損切りライン" value={formatNumber(primary.stopLoss)} />
+            <Detail label="推奨株数" value={formatNumber(primary.suggestedShares)} />
+            <Detail label="概算投入額" value={formatYen(primary.positionCost)} />
             <Detail label="想定損失" value={formatYen(primary.expectedLoss)} />
+            <Detail label="ATR(14日)" value={formatNumber(primary.atr, 1)} />
+            <Detail label="損切り幅(ATR倍)" value={primary.stopDistanceAtr === null ? "-" : `${primary.stopDistanceAtr.toFixed(2)} ATR`} />
+            <Detail label="出来高比(3日/20日)" value={primary.volumeRatio === null ? "-" : primary.volumeRatio.toFixed(2)} />
             <Detail label="年初来高値" value={formatNumber(primary.yearHigh)} />
             <Detail label="年初来高値乖離" value={<ColoredPercent value={primary.yearHighDeviation} digits={2} />} />
             <Detail label="5日騰落率" value={<ColoredPercent value={primary.return5d} digits={2} />} />

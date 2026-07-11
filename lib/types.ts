@@ -9,6 +9,12 @@ export interface ProfitWarning {
 
 export type CandidateStatus = "buy_candidate" | "watch" | "avoid";
 
+/** 品質フィルターの動作: off=無効 / flag=理由表示のみ / exclude=買い候補からwatchに降格 */
+export type QualityFilterMode = "off" | "flag" | "exclude";
+
+/** 建玉の決め方: fixed=defaultShares固定 / risk=リスク許容額から株数を逆算 */
+export type SizingMode = "fixed" | "risk";
+
 export type ThemeStatus = "strong" | "watch" | "weak";
 
 export type WatchPriority = "A" | "B" | "C" | string;
@@ -75,6 +81,17 @@ export interface Rules {
   themeBuyScoreThreshold: number;
   themeWatchScoreThreshold: number;
   trendFlatTolerance: number;
+  atrPeriod: number;
+  stopAtrMinMultiple: number;
+  stopTightFilterMode: QualityFilterMode;
+  sizingMode: SizingMode;
+  lotSize: number;
+  allowFractionalShares: boolean;
+  maxPositionYen: number | null;
+  volumeShortWindow: number;
+  volumeLongWindow: number;
+  volumeDryUpMaxRatio: number;
+  volumeFilterMode: QualityFilterMode;
   scoring: ScoringWeights;
   bollingerPeriod: number;
   bbTouchTolerance: number;
@@ -119,12 +136,19 @@ export interface CandidateResult {
   previousLow: number | null;
   return5d: number | null;
   return20d: number | null;
+  atr: number | null;
+  stopDistanceAtr: number | null;
+  volumeShortAvg: number | null;
+  volumeLongAvg: number | null;
+  volumeRatio: number | null;
   individualScore: number;
   themeScore: number;
   themeRank: number | null;
   entryPrice: number | null;
   entryUpperPrice: number | null;
   stopLoss: number | null;
+  suggestedShares: number | null;
+  positionCost: number | null;
   expectedLoss: number | null;
   recentHigh20: number | null;
   takeProfit1: number | null;

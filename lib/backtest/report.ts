@@ -86,6 +86,32 @@ export function individualScoreBand(score: number): string {
   return "<70";
 }
 
+// バンド境界は品質フィルターの既定閾値(stopAtrMinMultiple=0.3 / volumeDryUpMaxRatio=0.85)に
+// 一致させてあり、閾値の妥当性がバンド別成績からそのまま読めるようにしている。
+
+export const STOP_ATR_BANDS = ["<0.3", "0.3-0.6", "0.6-1.0", "1.0-1.5", "≥1.5", "不明"] as const;
+
+export function stopAtrBand(value: number | null): string {
+  if (value === null) return "不明";
+  if (value < 0.3) return "<0.3";
+  if (value < 0.6) return "0.3-0.6";
+  if (value < 1.0) return "0.6-1.0";
+  if (value < 1.5) return "1.0-1.5";
+  return "≥1.5";
+}
+
+export const VOLUME_RATIO_BANDS = ["<0.6", "0.6-0.85", "0.85-1.0", "1.0-1.3", "≥1.3", "不明"] as const;
+
+/** 0.85(=枯れ判定の既定閾値)ちょうどは条件を満たす側なので "0.6-0.85" に含める */
+export function volumeRatioBand(value: number | null): string {
+  if (value === null) return "不明";
+  if (value < 0.6) return "<0.6";
+  if (value <= 0.85) return "0.6-0.85";
+  if (value < 1.0) return "0.85-1.0";
+  if (value < 1.3) return "1.0-1.3";
+  return "≥1.3";
+}
+
 function ratioOrNull(count: number, total: number): number | null {
   return total > 0 ? count / total : null;
 }

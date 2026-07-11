@@ -6,7 +6,9 @@ export type NoFillReason =
   | "gap_below_stop"
   | "never_reached_limit"
   | "no_forward_data"
-  | "stop_at_or_above_entry";
+  | "stop_at_or_above_entry"
+  /** riskサイジング時、エントリー時点の損切り幅では1単元すら予算内に収まらない(エンジン側で判定) */
+  | "risk_over_budget";
 
 export type ExitReason = "stop" | "take_profit" | "ma5_trail" | "timeout";
 

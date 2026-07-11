@@ -29,12 +29,19 @@ function candidateFixture(overrides: Partial<CandidateResult> = {}): CandidateRe
     previousLow: 5900,
     return5d: 0.01,
     return20d: 0.05,
+    atr: 180,
+    stopDistanceAtr: 0.55,
+    volumeShortAvg: 900000,
+    volumeLongAvg: 1000000,
+    volumeRatio: 0.9,
     individualScore: 100,
     themeScore: 100,
     themeRank: 1,
     entryPrice: 5999.85,
     entryUpperPrice: 6059.55,
     stopLoss: 5900,
+    suggestedShares: 100,
+    positionCost: 599985,
     expectedLoss: 9985,
     recentHigh20: 6400,
     takeProfit1: 6400,
@@ -89,6 +96,11 @@ test("toSlimCandidate keeps analysis fields and converts reasons to keys", () =>
   assert.equal(slim.stopLoss, 5900);
   assert.equal(slim.takeProfit1, 6400);
   assert.equal(slim.exitMode, "trend_follow_exit");
+  assert.equal(slim.atr, 180);
+  assert.equal(slim.stopDistanceAtr, 0.55);
+  assert.equal(slim.volumeRatio, 0.9);
+  assert.equal(slim.suggestedShares, 100);
+  assert.equal(slim.positionCost, 599985);
   assert.deepEqual(slim.reasonKeys, ["buy_setup_ready"]);
 
   const keys = Object.keys(slim);
@@ -96,6 +108,9 @@ test("toSlimCandidate keeps analysis fields and converts reasons to keys", () =>
   assert.ok(!keys.includes("intradayMemo"));
   assert.ok(!keys.includes("profitWarnings"));
   assert.ok(!keys.includes("reasons"));
+  // 比率があれば復元不要のため生の出来高平均はスナップショットに保存しない
+  assert.ok(!keys.includes("volumeShortAvg"));
+  assert.ok(!keys.includes("volumeLongAvg"));
 });
 
 test("buildSnapshot assembles snapshot with date, hash and slim candidates", () => {

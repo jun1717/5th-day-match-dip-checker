@@ -29,12 +29,17 @@ export interface SlimCandidate {
   yearHighDeviation: number | null;
   return5d: number | null;
   return20d: number | null;
+  atr: number | null;
+  stopDistanceAtr: number | null;
+  volumeRatio: number | null;
   individualScore: number;
   themeScore: number;
   themeRank: number | null;
   entryPrice: number | null;
   entryUpperPrice: number | null;
   stopLoss: number | null;
+  suggestedShares: number | null;
+  positionCost: number | null;
   expectedLoss: number | null;
   takeProfit1: number | null;
   riskR: number | null;
@@ -89,12 +94,17 @@ export function toSlimCandidate(candidate: CandidateResult): SlimCandidate {
     yearHighDeviation: candidate.yearHighDeviation,
     return5d: candidate.return5d,
     return20d: candidate.return20d,
+    atr: candidate.atr,
+    stopDistanceAtr: candidate.stopDistanceAtr,
+    volumeRatio: candidate.volumeRatio,
     individualScore: candidate.individualScore,
     themeScore: candidate.themeScore,
     themeRank: candidate.themeRank,
     entryPrice: candidate.entryPrice,
     entryUpperPrice: candidate.entryUpperPrice,
     stopLoss: candidate.stopLoss,
+    suggestedShares: candidate.suggestedShares,
+    positionCost: candidate.positionCost,
     expectedLoss: candidate.expectedLoss,
     takeProfit1: candidate.takeProfit1,
     riskR: candidate.riskR,

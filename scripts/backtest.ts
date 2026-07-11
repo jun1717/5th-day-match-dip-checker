@@ -12,13 +12,17 @@ import {
   num,
   pct,
   positiveRateOf,
+  STOP_ATR_BANDS,
+  stopAtrBand,
   TradeStats,
+  VOLUME_RATIO_BANDS,
+  volumeRatioBand,
   yen
 } from "../lib/backtest/report";
 import { StopMode } from "../lib/backtest/simulate";
 import { toPriceRows, toWatchlistRows } from "../lib/csv";
 import { rulesHashOf } from "../lib/snapshot";
-import { CandidateStatus, Rules } from "../lib/types";
+import { CandidateStatus, QualityFilterMode, Rules, SizingMode } from "../lib/types";
 
 const CAVEATS = [
   "選択バイアス: 現在のウォッチリストは後知恵でテーマを選んでいるため、絶対値の成績は楽観的に出る。ルール間の相対比較に使うこと。",
@@ -36,6 +40,10 @@ const args = parseArgs({
     statuses: { type: "string", default: "buy_candidate" },
     "max-hold-days": { type: "string", default: "30" },
     "stop-mode": { type: "string", default: "prev-day" },
+    // rules.json を編集せずにA/B比較するためのオーバーライド(未指定時はrules.jsonの値)
+    sizing: { type: "string" },
+    "stop-tight-filter": { type: "string" },
+    "volume-filter": { type: "string" },
     out: { type: "string", default: "data/backtest" }
   }
 }).values;
@@ -59,8 +67,31 @@ if (stopMode !== "prev-day" && stopMode !== "signal") {
 const statuses = args.statuses!.split(",").map((status) => status.trim()) as CandidateStatus[];
 const maxHoldDays = Number(args["max-hold-days"]);
 
+const sizingOverride = args.sizing as SizingMode | undefined;
+if (sizingOverride !== undefined && sizingOverride !== "fixed" && sizingOverride !== "risk") {
+  console.error(`--sizing は fixed か risk を指定してください: ${sizingOverride}`);
+  process.exit(1);
+}
+
+function filterModeOf(value: string | undefined, flag: string): QualityFilterMode | undefined {
+  if (value === undefined) return undefined;
+  if (value !== "off" && value !== "flag" && value !== "exclude") {
+    console.error(`${flag} は off / flag / exclude を指定してください: ${value}`);
+    process.exit(1);
+  }
+  return value;
+}
+
+const stopTightOverride = filterModeOf(args["stop-tight-filter"], "--stop-tight-filter");
+const volumeOverride = filterModeOf(args["volume-filter"], "--volume-filter");
+
 const rawRules = readFileSync(path.join(root, "config/rules.json"), "utf8");
-const rules = JSON.parse(rawRules) as Rules;
+const rules: Rules = {
+  ...(JSON.parse(rawRules) as Rules),
+  ...(sizingOverride !== undefined ? { sizingMode: sizingOverride } : {}),
+  ...(stopTightOverride !== undefined ? { stopTightFilterMode: stopTightOverride } : {}),
+  ...(volumeOverride !== undefined ? { volumeFilterMode: volumeOverride } : {})
+};
 const watchlist = toWatchlistRows(readFileSync(path.join(root, "data/watchlist.csv"), "utf8"));
 const prices = toPriceRows(readFileSync(pricesPath, "utf8"));
 
@@ -94,7 +125,12 @@ const summary = {
     statuses,
     maxHoldDays,
     stopMode,
-    shares: rules.defaultShares,
+    sizingMode: rules.sizingMode,
+    stopTightFilterMode: rules.stopTightFilterMode,
+    volumeFilterMode: rules.volumeFilterMode,
+    lotSize: rules.lotSize,
+    maxPositionYen: rules.maxPositionYen,
+    defaultShares: rules.defaultShares,
     rulesHash: rulesHashOf(rawRules)
   },
   overall,
@@ -106,9 +142,22 @@ const summary = {
     exitReason: breakdown(result.trades, (record) => record.trade.exitReason ?? `no_fill:${record.trade.noFillReason}`),
     individualScoreBand: breakdown(result.trades, (record) => individualScoreBand(record.individualScore)),
     themeScore: breakdown(result.trades, (record) => String(record.themeScore)),
-    month: breakdown(result.trades, (record) => record.signalDate.slice(0, 7), "key")
+    month: breakdown(result.trades, (record) => record.signalDate.slice(0, 7), "key"),
+    stopAtrBand: bandBreakdown(result.trades, (record) => stopAtrBand(record.stopDistanceAtr), STOP_ATR_BANDS),
+    volumeRatioBand: bandBreakdown(result.trades, (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS)
   },
   cohorts: cohortSummary(result.cohorts),
+  // 執行モデル非依存の検証: バンド別のフォワードリターンで閾値(0.3 / 0.85)の妥当性を直接読む
+  cohortsByBand: {
+    stopAtr: {
+      buy_candidate: cohortBandSummary(result.cohorts, "buy_candidate", (record) => stopAtrBand(record.stopDistanceAtr), STOP_ATR_BANDS),
+      watch: cohortBandSummary(result.cohorts, "watch", (record) => stopAtrBand(record.stopDistanceAtr), STOP_ATR_BANDS)
+    },
+    volumeRatio: {
+      buy_candidate: cohortBandSummary(result.cohorts, "buy_candidate", (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS),
+      watch: cohortBandSummary(result.cohorts, "watch", (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS)
+    }
+  },
   caveats: CAVEATS
 };
 
@@ -130,6 +179,19 @@ function breakdown(
   return Object.fromEntries(entries);
 }
 
+/** バンド別内訳。バンド定義の順で表示する(fills順や辞書順では境界の意味が読めないため) */
+function bandBreakdown(
+  records: TradeRecord[],
+  keyOf: (record: TradeRecord) => string,
+  bandOrder: readonly string[]
+): Record<string, TradeStats> {
+  const entries = Array.from(groupBy(records, keyOf).entries())
+    .map(([key, group]) => [key, computeTradeStats(group)] as const)
+    .sort((a, b) => bandOrder.indexOf(a[0]) - bandOrder.indexOf(b[0]));
+
+  return Object.fromEntries(entries);
+}
+
 interface CohortStats {
   count: number;
   fwd5Mean: number | null;
@@ -138,20 +200,36 @@ interface CohortStats {
   fwd20PositiveRate: number | null;
 }
 
+function cohortStatsOf(group: CohortRecord[]): CohortStats {
+  return {
+    count: group.length,
+    fwd5Mean: meanOf(group.map((record) => record.fwd5)),
+    fwd5PositiveRate: positiveRateOf(group.map((record) => record.fwd5)),
+    fwd20Mean: meanOf(group.map((record) => record.fwd20)),
+    fwd20PositiveRate: positiveRateOf(group.map((record) => record.fwd20))
+  };
+}
+
 function cohortSummary(cohorts: CohortRecord[]): Record<string, CohortStats> {
-  const entries = Array.from(groupBy(cohorts, (record) => record.status).entries()).map(([status, group]) => [
-    status,
-    {
-      count: group.length,
-      fwd5Mean: meanOf(group.map((record) => record.fwd5)),
-      fwd5PositiveRate: positiveRateOf(group.map((record) => record.fwd5)),
-      fwd20Mean: meanOf(group.map((record) => record.fwd20)),
-      fwd20PositiveRate: positiveRateOf(group.map((record) => record.fwd20))
-    }
-  ] as const);
+  const entries = Array.from(groupBy(cohorts, (record) => record.status).entries()).map(
+    ([status, group]) => [status, cohortStatsOf(group)] as const
+  );
 
   const order: Record<string, number> = { buy_candidate: 0, watch: 1, avoid: 2 };
   entries.sort((a, b) => (order[a[0]] ?? 9) - (order[b[0]] ?? 9));
+  return Object.fromEntries(entries);
+}
+
+function cohortBandSummary(
+  cohorts: CohortRecord[],
+  status: CandidateStatus,
+  keyOf: (record: CohortRecord) => string,
+  bandOrder: readonly string[]
+): Record<string, CohortStats> {
+  const entries = Array.from(groupBy(cohorts.filter((record) => record.status === status), keyOf).entries())
+    .map(([band, group]) => [band, cohortStatsOf(group)] as const)
+    .sort((a, b) => bandOrder.indexOf(a[0]) - bandOrder.indexOf(b[0]));
+
   return Object.fromEntries(entries);
 }
 
@@ -159,7 +237,8 @@ function tradesCsv(records: TradeRecord[]): string {
   const headers = [
     "signalDate", "code", "name", "theme", "status", "individualScore", "themeScore", "exitMode",
     "rewardR", "stopUsed", "filled", "noFillReason", "entryDate", "entryFillPrice",
-    "exitDate", "exitPrice", "exitReason", "holdDays", "pnlYen", "rMultiple"
+    "exitDate", "exitPrice", "exitReason", "holdDays", "pnlYen", "rMultiple",
+    "shares", "stopDistanceAtr", "volumeRatio"
   ];
 
   const lines = records.map((record) =>
@@ -183,7 +262,10 @@ function tradesCsv(records: TradeRecord[]): string {
       record.trade.exitReason ?? "",
       record.trade.holdDays ?? "",
       record.trade.pnlYen === undefined ? "" : Math.round(record.trade.pnlYen),
-      record.trade.rMultiple === undefined ? "" : record.trade.rMultiple.toFixed(3)
+      record.trade.rMultiple === undefined ? "" : record.trade.rMultiple.toFixed(3),
+      record.shares,
+      record.stopDistanceAtr === null ? "" : record.stopDistanceAtr.toFixed(3),
+      record.volumeRatio === null ? "" : record.volumeRatio.toFixed(3)
     ]
       .map(csvCell)
       .join(",")
@@ -213,10 +295,31 @@ function printBreakdown(title: string, records: Record<string, TradeStats>): voi
   );
 }
 
+function printCohortBands(title: string, records: Record<string, CohortStats>): void {
+  console.log(`\n## コホート: ${title}`);
+  console.log(
+    formatTable(
+      ["バンド", "件数", "5日後平均", "5日後プラス率", "20日後平均", "20日後プラス率"],
+      Object.entries(records).map(([band, stats]) => [
+        band,
+        String(stats.count),
+        pct(stats.fwd5Mean),
+        pct(stats.fwd5PositiveRate),
+        pct(stats.fwd20Mean),
+        pct(stats.fwd20PositiveRate)
+      ])
+    )
+  );
+}
+
 function printReport(): void {
   console.log(`\n# バックテスト結果 (${summary.params.from} 〜 ${summary.params.to}, ${result.evaluatedDays.length}営業日)`);
   console.log(
     `対象status: ${statuses.join(", ")} / stopMode: ${stopMode} / maxHoldDays: ${maxHoldDays} / rules: ${summary.params.rulesHash}`
+  );
+  console.log(
+    `sizing: ${rules.sizingMode} / stopTightFilter: ${rules.stopTightFilterMode} / volumeFilter: ${rules.volumeFilterMode}` +
+      (rules.maxPositionYen !== null ? ` / maxPositionYen: ${rules.maxPositionYen.toLocaleString("ja-JP")}円` : "")
   );
 
   console.log("\n## 全体");
@@ -246,6 +349,8 @@ function printReport(): void {
   printBreakdown("個別スコア帯別", summary.breakdowns.individualScoreBand);
   printBreakdown("テーマスコア別", summary.breakdowns.themeScore);
   printBreakdown("月別", summary.breakdowns.month);
+  printBreakdown("損切り幅ATRバンド別", summary.breakdowns.stopAtrBand);
+  printBreakdown("出来高比バンド別", summary.breakdowns.volumeRatioBand);
 
   console.log("\n## コホート比較（status別フォワードリターン。執行モデルなしの素の値動き）");
   console.log(
@@ -261,6 +366,11 @@ function printReport(): void {
       ])
     )
   );
+
+  printCohortBands("損切り幅ATRバンド (buy_candidate)", summary.cohortsByBand.stopAtr.buy_candidate);
+  printCohortBands("損切り幅ATRバンド (watch)", summary.cohortsByBand.stopAtr.watch);
+  printCohortBands("出来高比バンド (buy_candidate)", summary.cohortsByBand.volumeRatio.buy_candidate);
+  printCohortBands("出来高比バンド (watch)", summary.cohortsByBand.volumeRatio.watch);
 
   console.log("\n## 注意事項");
   for (const caveat of CAVEATS) {

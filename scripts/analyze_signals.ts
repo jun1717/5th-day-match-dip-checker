@@ -98,6 +98,16 @@ let missingFields = 0;
 
 for (const file of snapshotFiles) {
   const snapshot = JSON.parse(readFileSync(path.join(signalsDir, file), "utf8")) as SignalSnapshot;
+
+  // 旧形式スナップショットには存在しないフィールドをnullに正規化する(undefinedのままCSVに落ちるのを防ぐ)
+  for (const candidate of snapshot.candidates) {
+    candidate.atr ??= null;
+    candidate.stopDistanceAtr ??= null;
+    candidate.volumeRatio ??= null;
+    candidate.suggestedShares ??= null;
+    candidate.positionCost ??= null;
+  }
+
   const targets = snapshot.candidates.filter(
     (candidate) => (candidate.status === "buy_candidate" || candidate.status === "watch") && candidate.date === snapshot.snapshotDate
   );
@@ -115,9 +125,12 @@ for (const file of snapshotFiles) {
     }
   }
 
-  const shares = sharesFor(snapshot.rulesHash);
+  const fallbackShares = sharesFor(snapshot.rulesHash);
 
   for (const candidate of byCode.values()) {
+    // riskモードのスナップショットは推奨株数を持つ。旧形式・fixedモードはルール版のdefaultShares
+    const shares =
+      candidate.suggestedShares !== null && candidate.suggestedShares > 0 ? candidate.suggestedShares : fallbackShares;
     const rows = rowsByCode.get(candidate.code);
     const index = indexByCode.get(candidate.code)?.get(snapshot.snapshotDate);
 
@@ -179,7 +192,7 @@ function performanceCsv(records: AnalyzedSignal[]): string {
   const headers = [
     "snapshotDate", "code", "name", "theme", "status", "individualScore", "themeScore", "rewardR", "exitMode", "rulesHash",
     "fwd5", "fwd20", "filled", "noFillReason", "entryDate", "entryFillPrice", "exitDate", "exitPrice", "exitReason",
-    "holdDays", "pnlYen", "rMultiple"
+    "holdDays", "pnlYen", "rMultiple", "suggestedShares", "stopDistanceAtr", "volumeRatio"
   ];
 
   const lines = records.map((record) =>
@@ -205,7 +218,10 @@ function performanceCsv(records: AnalyzedSignal[]): string {
       record.trade?.exitReason ?? "",
       record.trade?.holdDays ?? "",
       record.trade?.pnlYen === undefined || record.trade === null ? "" : Math.round(record.trade.pnlYen),
-      record.trade?.rMultiple === undefined || record.trade === null ? "" : record.trade.rMultiple.toFixed(3)
+      record.trade?.rMultiple === undefined || record.trade === null ? "" : record.trade.rMultiple.toFixed(3),
+      record.candidate.suggestedShares ?? "",
+      record.candidate.stopDistanceAtr === null ? "" : record.candidate.stopDistanceAtr.toFixed(3),
+      record.candidate.volumeRatio === null ? "" : record.candidate.volumeRatio.toFixed(3)
     ]
       .map(csvCell)
       .join(",")
