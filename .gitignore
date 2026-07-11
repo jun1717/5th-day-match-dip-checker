@@ -3,3 +3,8 @@ node_modules
 out
 tsconfig.tsbuildinfo
 .DS_Store
+
+# バックテスト・分析のローカル出力（data/history はコミット対象なので除外しない）
+data/prices_backtest.csv
+data/backtest/
+data/analysis/

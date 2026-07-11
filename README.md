@@ -120,6 +120,48 @@ npm run dev
 
 将来的にBB押し目を正式な買い候補へ昇格させる可能性を見据え、ロジックを分離した設計にしています。
 
+## シグナル履歴の蓄積（シグナルロガー）
+
+GitHub Actions が平日16:30 JST（大引け後の確定日足）に、その日の判定結果を `data/history/signals/YYYY-MM-DD.json` へスナップショットとして自動コミットします。ファイル名は株価データの日付で、ルール定義は `data/history/rules/<rulesHash>.json` に版管理されます。手動で取る場合:
+
+```bash
+npm run evaluate
+npm run snapshot
+```
+
+蓄積した履歴の「その後の成績」（フォワードリターン、約定シミュレーション）は次で分析できます:
+
+```bash
+npm run analyze:signals
+# 古い履歴も分析する場合は2年分の価格データを使う
+npm run analyze:signals -- --prices data/prices_backtest.csv
+```
+
+結果は `data/analysis/signal_performance.csv` とコンソールのサマリ表（status別・ルール版別）に出ます。
+
+## バックテスト
+
+過去の各営業日に本番と同じ評価ロジック（`lib/evaluator.ts`）を適用し、「買い候補→翌日エントリー→前日安値で損切り／直近20日高値で利確（テーマスコア90以上は5日線トレイル）」をシミュレートします。
+
+```bash
+# 1. バックテスト用データ取得（2年分・分割調整済み・確定日足のみ）
+python3 scripts/fetch_prices.py --period 2y --output data/prices_backtest.csv --no-intraday --auto-adjust
+
+# 2. 実行
+npm run backtest
+```
+
+主なオプション:
+
+- `--from` / `--to`: 対象期間（デフォルトはウォームアップ252営業日後〜フォワード21営業日前）
+- `--statuses buy_candidate,watch`: 対象status（デフォルト buy_candidate）
+- `--stop-mode prev-day|signal`: 損切りラインの取り方。デフォルト `prev-day` は「エントリー前日＝シグナル日の安値」で、運用ドクトリンの前日安値に忠実。`signal` は評価時の `stopLoss` フィールド（シグナル日前日の安値）を使う感度分析用
+- `--max-hold-days`: 最大保有営業日数（デフォルト30。トレンドフォロー時は適用しない）
+
+出力は `data/backtest/` に `trades.csv`（全トレード）、`summary.json`（全体・テーマ別・スコア帯別などの統計）、`cohorts.json`（status別フォワードリターン）。コンソールにもサマリ表が出ます。
+
+結果を読むときの注意（コンソールにも表示されます）: ウォッチリスト自体が後知恵選択なので絶対値は楽観的に出ます。ルール変更の相対比較に使ってください。同日に損切りと利確が両方成立した場合は損切り扱い（保守的仮定）です。
+
 ## MVPで未実装
 
 - リアルタイム5分足判定

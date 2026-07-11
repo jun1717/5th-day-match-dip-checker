@@ -8,6 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "evaluate": "tsx scripts/evaluate_candidates.ts",
+    "snapshot": "tsx scripts/snapshot_signals.ts",
+    "backtest": "tsx scripts/backtest.ts",
+    "analyze:signals": "tsx scripts/analyze_signals.ts",
     "test": "node --test --import tsx tests/*.test.ts"
   },
   "dependencies": {

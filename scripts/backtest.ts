@@ -1,0 +1,271 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { parseArgs } from "node:util";
+import { CohortRecord, runBacktest, TradeRecord } from "../lib/backtest/engine";
+import {
+  computeTradeStats,
+  csvCell,
+  formatTable,
+  groupBy,
+  individualScoreBand,
+  meanOf,
+  num,
+  pct,
+  positiveRateOf,
+  TradeStats,
+  yen
+} from "../lib/backtest/report";
+import { StopMode } from "../lib/backtest/simulate";
+import { toPriceRows, toWatchlistRows } from "../lib/csv";
+import { rulesHashOf } from "../lib/snapshot";
+import { CandidateStatus, Rules } from "../lib/types";
+
+const CAVEATS = [
+  "選択バイアス: 現在のウォッチリストは後知恵でテーマを選んでいるため、絶対値の成績は楽観的に出る。ルール間の相対比較に使うこと。",
+  "日足近似: 5分足の下げ止まり確認や9:30-10:00の執行タイミングは再現していない。",
+  "同日に損切りと利確の両方が成立した場合は損切り扱い(保守的仮定。成績を悲観方向に歪める)。",
+  "分割調整済み価格を推奨(--auto-adjust)。本番のprices.csvは未調整のため円額は参考値。",
+  "本番の場中実行は当日部分バーで評価するが、バックテストは確定日足で評価する(前日引け後評価→翌朝執行の近似)。"
+];
+
+const args = parseArgs({
+  options: {
+    prices: { type: "string", default: "data/prices_backtest.csv" },
+    from: { type: "string" },
+    to: { type: "string" },
+    statuses: { type: "string", default: "buy_candidate" },
+    "max-hold-days": { type: "string", default: "30" },
+    "stop-mode": { type: "string", default: "prev-day" },
+    out: { type: "string", default: "data/backtest" }
+  }
+}).values;
+
+const root = process.cwd();
+const pricesPath = path.resolve(root, args.prices!);
+
+if (!existsSync(pricesPath)) {
+  console.error(`価格データが見つかりません: ${args.prices}`);
+  console.error("先に以下でバックテスト用データを取得してください:");
+  console.error("  python3 scripts/fetch_prices.py --period 2y --output data/prices_backtest.csv --no-intraday --auto-adjust");
+  process.exit(1);
+}
+
+const stopMode = args["stop-mode"] as StopMode;
+if (stopMode !== "prev-day" && stopMode !== "signal") {
+  console.error(`--stop-mode は prev-day か signal を指定してください: ${stopMode}`);
+  process.exit(1);
+}
+
+const statuses = args.statuses!.split(",").map((status) => status.trim()) as CandidateStatus[];
+const maxHoldDays = Number(args["max-hold-days"]);
+
+const rawRules = readFileSync(path.join(root, "config/rules.json"), "utf8");
+const rules = JSON.parse(rawRules) as Rules;
+const watchlist = toWatchlistRows(readFileSync(path.join(root, "data/watchlist.csv"), "utf8"));
+const prices = toPriceRows(readFileSync(pricesPath, "utf8"));
+
+const result = runBacktest(watchlist, prices, rules, {
+  from: args.from,
+  to: args.to,
+  maxHoldDays,
+  stopMode,
+  statuses
+});
+
+if (result.evaluatedDays.length === 0) {
+  console.error(
+    "warning: 評価対象の営業日がありません。デフォルトはウォームアップ252営業日+フォワード21営業日を確保するため、" +
+      "2年分の価格データ(--period 2y)を使うか、--from/--to で期間を明示してください。"
+  );
+}
+
+const outDir = path.resolve(root, args.out!);
+mkdirSync(outDir, { recursive: true });
+
+writeFileSync(path.join(outDir, "trades.csv"), tradesCsv(result.trades));
+writeFileSync(path.join(outDir, "cohorts.json"), `${JSON.stringify(result.cohorts, null, 2)}\n`);
+
+const overall = computeTradeStats(result.trades);
+const summary = {
+  params: {
+    prices: args.prices,
+    from: result.evaluatedDays[0] ?? null,
+    to: result.evaluatedDays[result.evaluatedDays.length - 1] ?? null,
+    statuses,
+    maxHoldDays,
+    stopMode,
+    shares: rules.defaultShares,
+    rulesHash: rulesHashOf(rawRules)
+  },
+  overall,
+  skippedOpenPosition: result.skippedOpenPosition,
+  evaluatedDayCount: result.evaluatedDays.length,
+  breakdowns: {
+    theme: breakdown(result.trades, (record) => record.theme),
+    exitMode: breakdown(result.trades, (record) => record.exitMode),
+    exitReason: breakdown(result.trades, (record) => record.trade.exitReason ?? `no_fill:${record.trade.noFillReason}`),
+    individualScoreBand: breakdown(result.trades, (record) => individualScoreBand(record.individualScore)),
+    themeScore: breakdown(result.trades, (record) => String(record.themeScore)),
+    month: breakdown(result.trades, (record) => record.signalDate.slice(0, 7), "key")
+  },
+  cohorts: cohortSummary(result.cohorts),
+  caveats: CAVEATS
+};
+
+writeFileSync(path.join(outDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+
+printReport();
+
+function breakdown(
+  records: TradeRecord[],
+  keyOf: (record: TradeRecord) => string,
+  order: "fills" | "key" = "fills"
+): Record<string, TradeStats> {
+  const entries = Array.from(groupBy(records, keyOf).entries())
+    .map(([key, group]) => [key, computeTradeStats(group)] as const)
+    .sort((a, b) =>
+      order === "key" ? a[0].localeCompare(b[0], "ja") : b[1].fills - a[1].fills || a[0].localeCompare(b[0], "ja")
+    );
+
+  return Object.fromEntries(entries);
+}
+
+interface CohortStats {
+  count: number;
+  fwd5Mean: number | null;
+  fwd5PositiveRate: number | null;
+  fwd20Mean: number | null;
+  fwd20PositiveRate: number | null;
+}
+
+function cohortSummary(cohorts: CohortRecord[]): Record<string, CohortStats> {
+  const entries = Array.from(groupBy(cohorts, (record) => record.status).entries()).map(([status, group]) => [
+    status,
+    {
+      count: group.length,
+      fwd5Mean: meanOf(group.map((record) => record.fwd5)),
+      fwd5PositiveRate: positiveRateOf(group.map((record) => record.fwd5)),
+      fwd20Mean: meanOf(group.map((record) => record.fwd20)),
+      fwd20PositiveRate: positiveRateOf(group.map((record) => record.fwd20))
+    }
+  ] as const);
+
+  const order: Record<string, number> = { buy_candidate: 0, watch: 1, avoid: 2 };
+  entries.sort((a, b) => (order[a[0]] ?? 9) - (order[b[0]] ?? 9));
+  return Object.fromEntries(entries);
+}
+
+function tradesCsv(records: TradeRecord[]): string {
+  const headers = [
+    "signalDate", "code", "name", "theme", "status", "individualScore", "themeScore", "exitMode",
+    "rewardR", "stopUsed", "filled", "noFillReason", "entryDate", "entryFillPrice",
+    "exitDate", "exitPrice", "exitReason", "holdDays", "pnlYen", "rMultiple"
+  ];
+
+  const lines = records.map((record) =>
+    [
+      record.signalDate,
+      record.code,
+      record.name,
+      record.theme,
+      record.status,
+      record.individualScore,
+      record.themeScore,
+      record.exitMode,
+      record.rewardR === null ? "" : record.rewardR.toFixed(3),
+      record.trade.stopUsed,
+      record.trade.filled,
+      record.trade.noFillReason ?? "",
+      record.trade.entryDate ?? "",
+      record.trade.entryFillPrice ?? "",
+      record.trade.exitDate ?? "",
+      record.trade.exitPrice ?? "",
+      record.trade.exitReason ?? "",
+      record.trade.holdDays ?? "",
+      record.trade.pnlYen === undefined ? "" : Math.round(record.trade.pnlYen),
+      record.trade.rMultiple === undefined ? "" : record.trade.rMultiple.toFixed(3)
+    ]
+      .map(csvCell)
+      .join(",")
+  );
+
+  return [headers.join(","), ...lines, ""].join("\n");
+}
+
+function statsRow(label: string, stats: TradeStats): string[] {
+  return [
+    label,
+    `${stats.fills}/${stats.signals}`,
+    pct(stats.winRate),
+    num(stats.expectancyR),
+    yen(stats.expectancyYen),
+    yen(stats.totalPnlYen)
+  ];
+}
+
+function printBreakdown(title: string, records: Record<string, TradeStats>): void {
+  console.log(`\n## ${title}`);
+  console.log(
+    formatTable(
+      ["区分", "約定/シグナル", "勝率", "期待値R", "期待値(円)", "累積損益"],
+      Object.entries(records).map(([key, stats]) => statsRow(key, stats))
+    )
+  );
+}
+
+function printReport(): void {
+  console.log(`\n# バックテスト結果 (${summary.params.from} 〜 ${summary.params.to}, ${result.evaluatedDays.length}営業日)`);
+  console.log(
+    `対象status: ${statuses.join(", ")} / stopMode: ${stopMode} / maxHoldDays: ${maxHoldDays} / rules: ${summary.params.rulesHash}`
+  );
+
+  console.log("\n## 全体");
+  console.log(
+    formatTable(
+      ["指標", "値"],
+      [
+        ["シグナル数", String(overall.signals)],
+        ["約定数(約定率)", `${overall.fills} (${pct(overall.fillRate)})`],
+        ["勝率", pct(overall.winRate)],
+        ["平均勝ちR", num(overall.avgWinR)],
+        ["平均負けR", num(overall.avgLossR)],
+        ["期待値R", num(overall.expectancyR)],
+        ["期待値(円/トレード)", yen(overall.expectancyYen)],
+        ["プロフィットファクター", num(overall.profitFactor)],
+        ["累積損益", yen(overall.totalPnlYen)],
+        ["最大ドローダウン", yen(overall.maxDrawdownYen)],
+        ["平均保有日数", num(overall.avgHoldDays, 1)],
+        ["同一銘柄保有中でスキップ", String(result.skippedOpenPosition)]
+      ]
+    )
+  );
+
+  printBreakdown("テーマ別", summary.breakdowns.theme);
+  printBreakdown("exitMode別", summary.breakdowns.exitMode);
+  printBreakdown("決済理由別", summary.breakdowns.exitReason);
+  printBreakdown("個別スコア帯別", summary.breakdowns.individualScoreBand);
+  printBreakdown("テーマスコア別", summary.breakdowns.themeScore);
+  printBreakdown("月別", summary.breakdowns.month);
+
+  console.log("\n## コホート比較（status別フォワードリターン。執行モデルなしの素の値動き）");
+  console.log(
+    formatTable(
+      ["status", "件数", "5日後平均", "5日後プラス率", "20日後平均", "20日後プラス率"],
+      Object.entries(summary.cohorts).map(([status, stats]) => [
+        status,
+        String(stats.count),
+        pct(stats.fwd5Mean),
+        pct(stats.fwd5PositiveRate),
+        pct(stats.fwd20Mean),
+        pct(stats.fwd20PositiveRate)
+      ])
+    )
+  );
+
+  console.log("\n## 注意事項");
+  for (const caveat of CAVEATS) {
+    console.log(`- ${caveat}`);
+  }
+
+  console.log(`\n出力: ${path.relative(root, outDir)}/trades.csv, summary.json, cohorts.json`);
+}

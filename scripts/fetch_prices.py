@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import sys
@@ -94,7 +95,34 @@ def fetch_today_row(ticker: str, code: str) -> tuple[dict, str] | None:
     return row, as_of
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Fetch daily prices for the watchlist via yfinance.")
+    parser.add_argument("--period", default="1y", help="yfinanceの取得期間(例: 1y, 2y)。デフォルト: 1y")
+    parser.add_argument(
+        "--output",
+        default=str(PRICES_PATH),
+        help=f"出力先CSV。デフォルト: {PRICES_PATH.relative_to(ROOT)}(デフォルト以外を指定すると prices_as_of.json は更新しない)",
+    )
+    parser.add_argument(
+        "--no-intraday",
+        action="store_true",
+        help="当日分足の集計・追記をスキップする(バックテスト用の確定日足のみ取得)",
+    )
+    parser.add_argument(
+        "--auto-adjust",
+        action="store_true",
+        help="株式分割調整済みOHLCで取得する(バックテスト用。本番の prices.csv は未調整)",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = parse_args()
+    output_path = Path(args.output)
+    if not output_path.is_absolute():
+        output_path = ROOT / output_path
+    is_default_output = output_path.resolve() == PRICES_PATH.resolve()
+
     try:
         import pandas as pd
         import yfinance as yf
@@ -108,7 +136,9 @@ def main() -> int:
     for code in unique_codes(read_watchlist()):
         ticker = f"{code}.T"
         try:
-            data = yf.download(ticker, period="1y", interval="1d", auto_adjust=False, progress=False)
+            data = yf.download(
+                ticker, period=args.period, interval="1d", auto_adjust=args.auto_adjust, progress=False
+            )
         except Exception as exc:
             print(f"warning: {ticker} の取得に失敗しました: {exc}", file=sys.stderr)
             continue
@@ -148,27 +178,33 @@ def main() -> int:
             )
 
         # 当日の基準時刻が未確定なら分足から取得（日足の途中バーには時刻情報がないため）
-        has_today = any(r["date"] == today_str for r in daily_rows)
-        if prices_as_of is None:
-            result = fetch_today_row(ticker, code)
-            if result:
-                today_row, as_of = result
-                prices_as_of = as_of
-                if not has_today:
-                    daily_rows.append(today_row)
+        if not args.no_intraday:
+            has_today = any(r["date"] == today_str for r in daily_rows)
+            if prices_as_of is None:
+                result = fetch_today_row(ticker, code)
+                if result:
+                    today_row, as_of = result
+                    prices_as_of = as_of
+                    if not has_today:
+                        daily_rows.append(today_row)
 
         rows.extend(daily_rows)
 
-    PRICES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with PRICES_PATH.open("w", encoding="utf-8", newline="") as file:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=["code", "date", "open", "high", "low", "close", "volume"])
         writer.writeheader()
         writer.writerows(rows)
 
-    with AS_OF_PATH.open("w", encoding="utf-8") as file:
-        json.dump({"as_of": prices_as_of}, file)
+    if is_default_output:
+        with AS_OF_PATH.open("w", encoding="utf-8") as file:
+            json.dump({"as_of": prices_as_of}, file)
 
-    print(f"saved {len(rows)} rows to {PRICES_PATH.relative_to(ROOT)}")
+    try:
+        display_path = output_path.relative_to(ROOT)
+    except ValueError:
+        display_path = output_path
+    print(f"saved {len(rows)} rows to {display_path}")
     return 0
 
 
