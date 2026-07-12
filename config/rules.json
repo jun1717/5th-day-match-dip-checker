@@ -41,6 +41,10 @@
   "volumeLongWindow": 20,
   "volumeDryUpMaxRatio": 0.85,
   "volumeFilterMode": "flag",
+  "themeScoringMode": "binary",
+  "themeMomentumBlend5d": 0.6,
+  "themeMomentum5dRange": 0.05,
+  "themeMomentum20dRange": 0.1,
   "scoring": {
     "individual": {
       "ma25TrendUp": 20,

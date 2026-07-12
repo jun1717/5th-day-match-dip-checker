@@ -239,6 +239,76 @@ test("insufficient price history leaves measurements null without flags", () => 
   assert.ok(!candidate.reasons.some((reason) => reason.key === "stop_too_tight" || reason.key === "volume_not_dry"));
 });
 
+// ---- テーマスコア(binary互換 / continuous) ----
+
+test("binary mode keeps legacy theme output and null scoreComponents", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const result = evaluateCandidates(watchlist, samplePrices("8002"), rules, "2026-05-30T00:00:00.000Z");
+  const theme = result.themeScores[0];
+
+  // 1テーマ: rank1(30) + 維持率1/1(30+20) + return5dプラス(20) = 100
+  assert.equal(theme.themeScore, 100);
+  assert.equal(theme.rank, 1);
+  assert.equal(theme.scoreComponents, null);
+});
+
+test("continuous mode ranks themes by blended 5d/20d relative strength", () => {
+  const watchlist: WatchlistRow[] = [
+    watchlistRow("9201", "テーマA"), // 5日は最強だが20日は最弱
+    watchlistRow("9202", "テーマB"), // 5日は2位だが20日は最強
+    watchlistRow("9203", "テーマC")
+  ];
+  const prices = [
+    ...pricesWithReturns("9201", 0.04, -0.06),
+    ...pricesWithReturns("9202", 0.02, 0.08),
+    ...pricesWithReturns("9203", -0.03, 0.01)
+  ];
+
+  const binary = evaluateCandidates(watchlist, prices, rules, "2026-05-30T00:00:00.000Z");
+  const continuous = evaluateCandidates(
+    watchlist,
+    prices,
+    { ...rules, themeScoringMode: "continuous" },
+    "2026-05-30T00:00:00.000Z"
+  );
+
+  const rankOf = (themes: typeof binary.themeScores, name: string) =>
+    themes.find((theme) => theme.theme === name)?.rank;
+
+  // binaryはreturn5d順: A→B→C
+  assert.equal(rankOf(binary.themeScores, "テーマA"), 1);
+  assert.equal(rankOf(binary.themeScores, "テーマB"), 2);
+
+  // continuousは相対強度(0.6×pct5+0.4×pct20)順: B(0.7)→A(0.6)→C(0.2)
+  assert.equal(rankOf(continuous.themeScores, "テーマB"), 1);
+  assert.equal(rankOf(continuous.themeScores, "テーマA"), 2);
+  assert.equal(rankOf(continuous.themeScores, "テーマC"), 3);
+
+  for (const theme of continuous.themeScores) {
+    assert.ok(theme.scoreComponents !== null);
+    const sum =
+      theme.scoreComponents.relativeStrength +
+      theme.scoreComponents.leaderMa5 +
+      theme.scoreComponents.leaderMa25 +
+      theme.scoreComponents.momentum;
+    assert.ok(Math.abs(sum - theme.themeScore) <= 0.7);
+
+    const expectedStatus =
+      theme.themeScore >= rules.themeBuyScoreThreshold
+        ? "strong"
+        : theme.themeScore >= rules.themeWatchScoreThreshold
+          ? "watch"
+          : "weak";
+    assert.equal(theme.status, expectedStatus);
+  }
+
+  // 候補のthemeScoreはテーマ側と一致し続ける
+  for (const candidate of continuous.candidates) {
+    const theme = continuous.themeScores.find((row) => row.theme === candidate.theme);
+    assert.equal(candidate.themeScore, theme?.themeScore);
+  }
+});
+
 // ---- フィクスチャ ----
 
 function watchlistRow(code: string, theme: string): WatchlistRow {
@@ -274,6 +344,23 @@ function samplePrices(code: string): PriceRow[] {
 /** samplePrices の前日(インデックス28)の安値だけを差し替える(損切り幅のバリエーション用) */
 function pricesWithPrevLow(code: string, prevLow: number): PriceRow[] {
   return samplePrices(code).map((row, index) => (index === 28 ? { ...row, low: prevLow } : row));
+}
+
+/** return5d/return20dだけを狙った値にした30本の系列(rateOfChangeAtは端点のみ参照する) */
+function pricesWithReturns(code: string, r5: number, r20: number): PriceRow[] {
+  const closes = Array.from({ length: 30 }, () => 100);
+  closes[24] = 100 / (1 + r5); // rateOfChangeAt(closes, 29, 5) の始点
+  closes[9] = 100 / (1 + r20); // rateOfChangeAt(closes, 29, 20) の始点
+
+  return closes.map((close, index) => ({
+    code,
+    date: `2026-05-${String(index + 1).padStart(2, "0")}`,
+    open: close - 1,
+    high: close + 2,
+    low: close - 2,
+    close,
+    volume: 1_000_000
+  }));
 }
 
 /** 直近3日の出来高だけ半減させた押し目(売り枯れ)パターン */

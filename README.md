@@ -89,6 +89,15 @@ npm run dev
 
 投資テーマは5日騰落率平均、20日騰落率平均、テーマ順位、テーマ主役株の5日線/25日線維持率、5日騰落率がプラスかどうかでテーマ資金スコアを計算します。
 
+### テーマスコアの計算方式（themeScoringMode）
+
+`themeScoringMode` で切り替えます（既定 `binary`）。
+
+- `binary`: 従来どおり4条件×二値×固定配点（順位30・主役株5日線維持30・同25日線維持20・5日騰落率プラス20）。スコアは0/20/30/50/70/80/100などに飛び飛びになります。
+- `continuous`: 各二値条件を同じ配点のまま連続量に置き換えた0〜100の連続スコア。順位30点→5日/20日騰落率パーセンタイルのブレンド（`themeMomentumBlend5d`、既定0.6:0.4）、維持率→維持率そのまま、5日プラス20点→±`themeMomentum5dRange`/±`themeMomentum20dRange`（既定±5%/±10%）をclampした絶対モメンタム。テーマ順位もブレンド相対強度順になり、スコア内訳は `scoreComponents`（/themesのスコアバッジのツールチップ）で確認できます。
+
+**2026年7月の検証で `binary` 維持を判断しました**（continuousは境界フリップが減らず、閾値80に中位テーマが流入して期待値Rが劣化。詳細と較正案は `docs/backtest-results/2026-07-theme-scoring.md`）。continuousの再検証は `npm run backtest -- --theme-scoring continuous` でいつでもできます。
+
 最終判定は個別押し目スコア、テーマ資金スコア、想定損失、25日線割れなどのハード条件を組み合わせて、買い候補、監視、見送りに分類します。見送りや監視の理由は `reasons` 配列に、`ma5_too_far_above`、`entry_upper_exceeded`、`theme_weak`、`ma25_broken`、`ma25_trend_down`、`expected_loss_too_large`、`position_cost_too_large`、`breakout_type`、`ma25_pullback_type`、`missing_price_data`、`reward_r_too_low`、`profit_target_near`、`profit_warning_overheated`、`stop_too_tight`、`volume_not_dry` などで保存します。
 
 ### 建玉（株数）の決め方
@@ -177,9 +186,9 @@ npm run backtest
 - `--statuses buy_candidate,watch`: 対象status（デフォルト buy_candidate）
 - `--stop-mode prev-day|signal`: 損切りラインの取り方。デフォルト `prev-day` は「エントリー前日＝シグナル日の安値」で、運用ドクトリンの前日安値に忠実。`signal` は評価時の `stopLoss` フィールド（シグナル日前日の安値）を使う感度分析用
 - `--max-hold-days`: 最大保有営業日数（デフォルト30。トレンドフォロー時は適用しない）
-- `--sizing fixed|risk` / `--stop-tight-filter off|flag|exclude` / `--volume-filter off|flag|exclude`: rules.json を編集せずに建玉方式・品質フィルターを一時的に上書きしてA/B比較するためのオプション（未指定時は rules.json の値）
+- `--sizing fixed|risk` / `--stop-tight-filter off|flag|exclude` / `--volume-filter off|flag|exclude` / `--theme-scoring binary|continuous`: rules.json を編集せずに建玉方式・品質フィルター・テーマスコア方式を一時的に上書きしてA/B比較するためのオプション（未指定時は rules.json の値）
 
-出力は `data/backtest/` に `trades.csv`（全トレード）、`summary.json`（全体・テーマ別・スコア帯別などの統計）、`cohorts.json`（status別フォワードリターン）。コンソールにもサマリ表が出ます。損切り幅ATRバンド別・出来高比バンド別の成績と、status×バンド別のコホート表（執行モデル非依存のフォワードリターン）も出るので、品質フィルターの閾値（0.3 ATR / 出来高比0.85）の妥当性を直接確認できます。
+出力は `data/backtest/` に `trades.csv`（全トレード）、`summary.json`（全体・テーマ別・スコア帯別などの統計）、`cohorts.json`（status別フォワードリターン）。コンソールにもサマリ表が出ます。損切り幅ATRバンド別・出来高比バンド別・テーマスコア帯別（60/80/90境界）の成績と、status×バンド別のコホート表（執行モデル非依存のフォワードリターン）も出るので、品質フィルターの閾値（0.3 ATR / 出来高比0.85）やテーマ閾値（80）の妥当性を直接確認できます。あわせてテーマ安定性指標（テーマstatusの日次フリップ回数・日次スコア変化。`summary.json` の `themeStability`）も出るため、テーマスコア方式の境界安定性を比較できます。
 
 品質フィルターのA/B比較の例:
 
@@ -194,6 +203,38 @@ npm run backtest -- --stop-tight-filter off --volume-filter exclude --out data/b
 exclude採用の目安は「ベースライン比で期待値Rが改善し、かつ約定数がベースラインの60%以上残る」ことです。2026年7月の検証結果と既定値の判断根拠は `docs/backtest-results/2026-07-atr-volume.md` を参照してください（結論: sizingMode=risk採用、両フィルターはflag維持）。
 
 結果を読むときの注意（コンソールにも表示されます）: ウォッチリスト自体が後知恵選択なので絶対値は楽観的に出ます。ルール変更の相対比較に使ってください。同日に損切りと利確が両方成立した場合は損切り扱い（保守的仮定）です。
+
+## 実際の売買とツールの突き合わせ（トレードレビュー）
+
+実際の約定を `data/trades/executions.csv` に手動で記録すると、シグナル履歴スナップショットと突き合わせて「スリッページ」「ルール逸脱」「ツールに完全に従った場合の仮想成績 vs 実成績」を月次で振り返れます。
+
+### 記録の付け方
+
+1行=1約定。部分約定・分割売りはそのまま複数行にします。
+
+```csv
+executedAt,code,side,price,shares,memo
+2026-07-10,5803,buy,6210,100,寄り後に指値で約定
+2026-07-15,5803,sell,6580,100,第1利確
+```
+
+- `executedAt`: 約定日（YYYY-MM-DD）。`side`: buy/sell。`price`: 約定単価。`shares`: 株数（正の整数）。`memo`: 自由記述（省略可）。
+- 不正な行は行番号付きでエラーになります（黙ってスキップしません）。
+- **プライバシー注意**: リポジトリがpublicの場合、コミットすると実際の売買記録が公開されます。避けたい場合は `data/trades/` を `.gitignore` に追加してローカル管理にしてください。
+
+### 月次振り返りの実行
+
+```bash
+npm run review:trades
+# 月で絞る / 古い売買は2年分の価格データで
+npm run review:trades -- --month 2026-07 --prices data/prices_backtest.csv
+```
+
+売り買いはFIFOでロット化し、各買いを直前のスナップショット（`--lookback-days`、既定5暦日。無ければ当日分を場中判断として採用）と突き合わせます。出力は `data/analysis/trade_review.csv` とコンソールの表（トレード別・月次サマリ・逸脱フラグ集計・オープン建玉）。仮想成績は実際の株数で計算するため、実成績との差は純粋に執行の差を表します。
+
+逸脱フラグ: `no_signal_data`（履歴なし）/ `off_watchlist`（ウォッチリスト外）/ `not_buy_candidate`（ルール外エントリー）/ `same_day_signal`（場中判断）/ `chase_entry`（買い上限超え）/ `over_sized`（推奨株数超過）/ `late_stop`（損切りラインより`--stop-tolerance`（既定0.5%）超下で売却）/ `holding_below_stop`（**損切りライン割れを保有中**。オープン建玉の最重要警告）。
+
+月次サマリの「ルール外」は `no_signal_data` / `off_watchlist` / `not_buy_candidate` を数えます（`same_day_signal` と `late_stop` は執行タイミングの問題として別枠）。手数料・税は含みません（バックテストと整合）。
 
 ## MVPで未実装
 

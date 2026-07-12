@@ -1,5 +1,5 @@
 import { evaluateCandidates, suggestedSharesFor } from "../evaluator";
-import { CandidateResult, CandidateStatus, ExitMode, PriceRow, Rules, WatchlistRow } from "../types";
+import { CandidateResult, CandidateStatus, ExitMode, PriceRow, Rules, ThemeStatus, WatchlistRow } from "../types";
 import { SimulatedTrade, simulateTrade, StopMode } from "./simulate";
 
 /** 本番の fetch_prices.py が period="1y" で取得することを再現するスライス幅（営業日） */
@@ -48,9 +48,19 @@ export interface CohortRecord {
   fwd20: number | null;
 }
 
+/** 評価日ごとのテーマスコア(境界安定性=status日次フリップの測定用) */
+export interface ThemeDayRecord {
+  date: string;
+  theme: string;
+  themeScore: number;
+  status: ThemeStatus;
+  rank: number;
+}
+
 export interface EngineResult {
   trades: TradeRecord[];
   cohorts: CohortRecord[];
+  themeDays: ThemeDayRecord[];
   skippedOpenPosition: number;
   evaluatedDays: string[];
 }
@@ -73,7 +83,7 @@ export function runBacktest(
   const tradingDays = allTradingDays(prices);
 
   if (tradingDays.length === 0) {
-    return { trades: [], cohorts: [], skippedOpenPosition: 0, evaluatedDays: [] };
+    return { trades: [], cohorts: [], themeDays: [], skippedOpenPosition: 0, evaluatedDays: [] };
   }
 
   const defaultFrom = tradingDays[Math.min(DEFAULT_WARMUP_ROWS, tradingDays.length - 1)];
@@ -83,6 +93,7 @@ export function runBacktest(
 
   const trades: TradeRecord[] = [];
   const cohorts: CohortRecord[] = [];
+  const themeDays: ThemeDayRecord[] = [];
   const openPositionUntil = new Map<string, string>(); // code -> exitDate
   let skippedOpenPosition = 0;
   const evaluatedDays: string[] = [];
@@ -97,6 +108,10 @@ export function runBacktest(
     evaluatedDays.push(day);
     const slicedPrices = slicePricesUpTo(seriesByCode);
     const result = evaluateCandidates(watchlist, slicedPrices, rules, day);
+
+    for (const theme of result.themeScores) {
+      themeDays.push({ date: day, theme: theme.theme, themeScore: theme.themeScore, status: theme.status, rank: theme.rank });
+    }
 
     // その日に取引のあった銘柄の評価行だけを対象にする（date一致で判定）
     const todays = result.candidates.filter((candidate) => candidate.date === day);
@@ -200,7 +215,7 @@ export function runBacktest(
     }
   }
 
-  return { trades, cohorts, skippedOpenPosition, evaluatedDays };
+  return { trades, cohorts, themeDays, skippedOpenPosition, evaluatedDays };
 }
 
 function buildSeries(prices: PriceRow[]): Map<string, CodeSeries> {

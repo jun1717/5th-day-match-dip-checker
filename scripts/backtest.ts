@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { CohortRecord, runBacktest, TradeRecord } from "../lib/backtest/engine";
+import { CohortRecord, runBacktest, ThemeDayRecord, TradeRecord } from "../lib/backtest/engine";
 import {
   computeTradeStats,
   csvCell,
@@ -14,6 +14,8 @@ import {
   positiveRateOf,
   STOP_ATR_BANDS,
   stopAtrBand,
+  THEME_SCORE_BANDS,
+  themeScoreBand,
   TradeStats,
   VOLUME_RATIO_BANDS,
   volumeRatioBand,
@@ -22,7 +24,7 @@ import {
 import { StopMode } from "../lib/backtest/simulate";
 import { toPriceRows, toWatchlistRows } from "../lib/csv";
 import { rulesHashOf } from "../lib/snapshot";
-import { CandidateStatus, QualityFilterMode, Rules, SizingMode } from "../lib/types";
+import { CandidateStatus, QualityFilterMode, Rules, SizingMode, ThemeScoringMode, ThemeStatus } from "../lib/types";
 
 const CAVEATS = [
   "選択バイアス: 現在のウォッチリストは後知恵でテーマを選んでいるため、絶対値の成績は楽観的に出る。ルール間の相対比較に使うこと。",
@@ -44,6 +46,7 @@ const args = parseArgs({
     sizing: { type: "string" },
     "stop-tight-filter": { type: "string" },
     "volume-filter": { type: "string" },
+    "theme-scoring": { type: "string" },
     out: { type: "string", default: "data/backtest" }
   }
 }).values;
@@ -85,12 +88,19 @@ function filterModeOf(value: string | undefined, flag: string): QualityFilterMod
 const stopTightOverride = filterModeOf(args["stop-tight-filter"], "--stop-tight-filter");
 const volumeOverride = filterModeOf(args["volume-filter"], "--volume-filter");
 
+const themeScoringOverride = args["theme-scoring"] as ThemeScoringMode | undefined;
+if (themeScoringOverride !== undefined && themeScoringOverride !== "binary" && themeScoringOverride !== "continuous") {
+  console.error(`--theme-scoring は binary か continuous を指定してください: ${themeScoringOverride}`);
+  process.exit(1);
+}
+
 const rawRules = readFileSync(path.join(root, "config/rules.json"), "utf8");
 const rules: Rules = {
   ...(JSON.parse(rawRules) as Rules),
   ...(sizingOverride !== undefined ? { sizingMode: sizingOverride } : {}),
   ...(stopTightOverride !== undefined ? { stopTightFilterMode: stopTightOverride } : {}),
-  ...(volumeOverride !== undefined ? { volumeFilterMode: volumeOverride } : {})
+  ...(volumeOverride !== undefined ? { volumeFilterMode: volumeOverride } : {}),
+  ...(themeScoringOverride !== undefined ? { themeScoringMode: themeScoringOverride } : {})
 };
 const watchlist = toWatchlistRows(readFileSync(path.join(root, "data/watchlist.csv"), "utf8"));
 const prices = toPriceRows(readFileSync(pricesPath, "utf8"));
@@ -128,6 +138,7 @@ const summary = {
     sizingMode: rules.sizingMode,
     stopTightFilterMode: rules.stopTightFilterMode,
     volumeFilterMode: rules.volumeFilterMode,
+    themeScoringMode: rules.themeScoringMode,
     lotSize: rules.lotSize,
     maxPositionYen: rules.maxPositionYen,
     defaultShares: rules.defaultShares,
@@ -141,7 +152,8 @@ const summary = {
     exitMode: breakdown(result.trades, (record) => record.exitMode),
     exitReason: breakdown(result.trades, (record) => record.trade.exitReason ?? `no_fill:${record.trade.noFillReason}`),
     individualScoreBand: breakdown(result.trades, (record) => individualScoreBand(record.individualScore)),
-    themeScore: breakdown(result.trades, (record) => String(record.themeScore)),
+    // 連続テーマスコアでは離散値でのグループ化が破綻するため閾値(60/80/90)境界のバンドで集計する
+    themeScoreBand: bandBreakdown(result.trades, (record) => themeScoreBand(record.themeScore), THEME_SCORE_BANDS),
     month: breakdown(result.trades, (record) => record.signalDate.slice(0, 7), "key"),
     stopAtrBand: bandBreakdown(result.trades, (record) => stopAtrBand(record.stopDistanceAtr), STOP_ATR_BANDS),
     volumeRatioBand: bandBreakdown(result.trades, (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS)
@@ -156,8 +168,13 @@ const summary = {
     volumeRatio: {
       buy_candidate: cohortBandSummary(result.cohorts, "buy_candidate", (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS),
       watch: cohortBandSummary(result.cohorts, "watch", (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS)
+    },
+    themeScore: {
+      buy_candidate: cohortBandSummary(result.cohorts, "buy_candidate", (record) => themeScoreBand(record.themeScore), THEME_SCORE_BANDS),
+      watch: cohortBandSummary(result.cohorts, "watch", (record) => themeScoreBand(record.themeScore), THEME_SCORE_BANDS)
     }
   },
+  themeStability: themeStabilityOf(result.themeDays),
   caveats: CAVEATS
 };
 
@@ -231,6 +248,47 @@ function cohortBandSummary(
     .sort((a, b) => bandOrder.indexOf(a[0]) - bandOrder.indexOf(b[0]));
 
   return Object.fromEntries(entries);
+}
+
+interface ThemeStability {
+  themeDayCount: number;
+  statusFlips: number;
+  /** status変化回数 / (テーマ数×営業日数) × 100。binary vs continuous の境界安定性比較の主指標 */
+  flipsPer100Days: number;
+  avgAbsDailyScoreChange: number;
+  statusDistribution: Record<ThemeStatus, number>;
+}
+
+function themeStabilityOf(themeDays: ThemeDayRecord[]): ThemeStability {
+  const statusDistribution: Record<ThemeStatus, number> = { strong: 0, watch: 0, weak: 0 };
+  let statusFlips = 0;
+  let scoreChangeTotal = 0;
+  let transitions = 0;
+
+  for (const rows of groupBy(themeDays, (record) => record.theme).values()) {
+    const ordered = rows.slice().sort((a, b) => a.date.localeCompare(b.date));
+    ordered.forEach((row, index) => {
+      statusDistribution[row.status] += 1;
+      if (index === 0) {
+        return;
+      }
+
+      const previous = ordered[index - 1];
+      if (row.status !== previous.status) {
+        statusFlips += 1;
+      }
+      scoreChangeTotal += Math.abs(row.themeScore - previous.themeScore);
+      transitions += 1;
+    });
+  }
+
+  return {
+    themeDayCount: themeDays.length,
+    statusFlips,
+    flipsPer100Days: themeDays.length > 0 ? (statusFlips / themeDays.length) * 100 : 0,
+    avgAbsDailyScoreChange: transitions > 0 ? scoreChangeTotal / transitions : 0,
+    statusDistribution
+  };
 }
 
 function tradesCsv(records: TradeRecord[]): string {
@@ -319,6 +377,7 @@ function printReport(): void {
   );
   console.log(
     `sizing: ${rules.sizingMode} / stopTightFilter: ${rules.stopTightFilterMode} / volumeFilter: ${rules.volumeFilterMode}` +
+      ` / themeScoring: ${rules.themeScoringMode}` +
       (rules.maxPositionYen !== null ? ` / maxPositionYen: ${rules.maxPositionYen.toLocaleString("ja-JP")}円` : "")
   );
 
@@ -347,7 +406,7 @@ function printReport(): void {
   printBreakdown("exitMode別", summary.breakdowns.exitMode);
   printBreakdown("決済理由別", summary.breakdowns.exitReason);
   printBreakdown("個別スコア帯別", summary.breakdowns.individualScoreBand);
-  printBreakdown("テーマスコア別", summary.breakdowns.themeScore);
+  printBreakdown("テーマスコア帯別", summary.breakdowns.themeScoreBand);
   printBreakdown("月別", summary.breakdowns.month);
   printBreakdown("損切り幅ATRバンド別", summary.breakdowns.stopAtrBand);
   printBreakdown("出来高比バンド別", summary.breakdowns.volumeRatioBand);
@@ -371,6 +430,26 @@ function printReport(): void {
   printCohortBands("損切り幅ATRバンド (watch)", summary.cohortsByBand.stopAtr.watch);
   printCohortBands("出来高比バンド (buy_candidate)", summary.cohortsByBand.volumeRatio.buy_candidate);
   printCohortBands("出来高比バンド (watch)", summary.cohortsByBand.volumeRatio.watch);
+  printCohortBands("テーマスコア帯 (buy_candidate)", summary.cohortsByBand.themeScore.buy_candidate);
+  printCohortBands("テーマスコア帯 (watch)", summary.cohortsByBand.themeScore.watch);
+
+  const stability = summary.themeStability;
+  console.log(`\n## テーマ安定性 (themeScoringMode: ${rules.themeScoringMode})`);
+  console.log(
+    formatTable(
+      ["指標", "値"],
+      [
+        ["テーマ×営業日", String(stability.themeDayCount)],
+        ["status変化回数", String(stability.statusFlips)],
+        ["100テーマ日あたりの変化", num(stability.flipsPer100Days)],
+        ["日次スコア変化(平均絶対値)", num(stability.avgAbsDailyScoreChange)],
+        [
+          "strong/watch/weak日数",
+          `${stability.statusDistribution.strong} / ${stability.statusDistribution.watch} / ${stability.statusDistribution.weak}`
+        ]
+      ]
+    )
+  );
 
   console.log("\n## 注意事項");
   for (const caveat of CAVEATS) {

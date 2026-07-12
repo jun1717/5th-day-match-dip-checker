@@ -1,5 +1,5 @@
 import { themeStatusLabel } from "../lib/format";
-import { ThemeScore } from "../lib/types";
+import { ThemeScore, ThemeScoreComponents } from "../lib/types";
 import { ColoredPercent } from "./ColoredPercent";
 import { PriorityBadge } from "./PriorityBadge";
 import { ScoreBadge } from "./ScoreBadge";
@@ -8,6 +8,15 @@ interface ThemeRankingProps {
   themes: ThemeScore[];
   limit?: number;
   priority?: string;
+}
+
+/** 連続スコア(continuousモード)のときだけ内訳ツールチップを出す。旧データはフィールド自体が無いためnull扱い */
+function scoreComponentsTitle(components: ThemeScoreComponents | null | undefined): string | undefined {
+  if (components == null) {
+    return undefined;
+  }
+
+  return `スコア内訳: 相対強度 ${components.relativeStrength} / 主役株5日線 ${components.leaderMa5} / 主役株25日線 ${components.leaderMa25} / モメンタム ${components.momentum}`;
 }
 
 export function ThemeRanking({ themes, limit, priority }: ThemeRankingProps) {
@@ -44,7 +53,7 @@ export function ThemeRanking({ themes, limit, priority }: ThemeRankingProps) {
               <td className="text-right"><ColoredPercent value={theme.return5d} digits={2} /></td>
               <td className="text-right"><ColoredPercent value={theme.return20d} digits={2} /></td>
               <td className="text-right">{theme.rank}</td>
-              <td>
+              <td title={scoreComponentsTitle(theme.scoreComponents)}>
                 <ScoreBadge score={theme.themeScore} />
               </td>
               <td className="text-right"><ColoredPercent value={theme.leaderMa5AboveRatio} digits={0} /></td>

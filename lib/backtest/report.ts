@@ -100,6 +100,18 @@ export function stopAtrBand(value: number | null): string {
   return "≥1.5";
 }
 
+// バンド境界はテーマスコアの既定閾値(60=watch / 80=buy / 90=trendFollow)に一致させてある。
+// binaryモードの離散値(0/20/.../100)もこのバンドに正しく落ちる。
+
+export const THEME_SCORE_BANDS = ["<60", "60-79", "80-89", "90-100"] as const;
+
+export function themeScoreBand(score: number): string {
+  if (score < 60) return "<60";
+  if (score < 80) return "60-79";
+  if (score < 90) return "80-89";
+  return "90-100";
+}
+
 export const VOLUME_RATIO_BANDS = ["<0.6", "0.6-0.85", "0.85-1.0", "1.0-1.3", "≥1.3", "不明"] as const;
 
 /** 0.85(=枯れ判定の既定閾値)ちょうどは条件を満たす側なので "0.6-0.85" に含める */

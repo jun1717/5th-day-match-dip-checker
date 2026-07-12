@@ -80,6 +80,57 @@ export function toWatchlistRows(text: string): WatchlistRow[] {
   });
 }
 
+export interface ExecutionRow {
+  executedAt: string;
+  code: string;
+  side: "buy" | "sell";
+  price: number;
+  shares: number;
+  memo: string;
+}
+
+/**
+ * data/trades/executions.csv のパース。手動記録ファイルのため不正行は黙ってスキップせず
+ * 行番号付きでエラーにする(記録のゴミは突き合わせ分析全体を静かに歪めるため)。
+ */
+export function toExecutionRows(text: string): ExecutionRow[] {
+  const rows = parseCsv(text).map((row, index) => {
+    const line = index + 2; // ヘッダーが1行目
+    const executedAt = row.executedAt ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(executedAt)) {
+      throw new Error(`executions.csv ${line}行目: executedAt は YYYY-MM-DD 形式で指定してください: "${executedAt}"`);
+    }
+
+    const side = row.side;
+    if (side !== "buy" && side !== "sell") {
+      throw new Error(`executions.csv ${line}行目: side は buy か sell を指定してください: "${side}"`);
+    }
+
+    const price = Number(row.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error(`executions.csv ${line}行目: price は正の数値で指定してください: "${row.price}"`);
+    }
+
+    const shares = Number(row.shares);
+    if (!Number.isInteger(shares) || shares <= 0) {
+      throw new Error(`executions.csv ${line}行目: shares は正の整数で指定してください: "${row.shares}"`);
+    }
+
+    return {
+      executedAt,
+      code: normalizeCode(row.code),
+      // 上の検証でbuy/sellに限定済み(string型からの否定絞り込みはTSが行わないため明示する)
+      side: side as ExecutionRow["side"],
+      price,
+      shares,
+      memo: row.memo ?? ""
+    };
+  });
+
+  // 安定ソート: 同日内はファイル記載順を保つ
+  return rows.slice().sort((a, b) => a.executedAt.localeCompare(b.executedAt));
+}
+
 export function toPriceRows(text: string): PriceRow[] {
   return parseCsv(text)
     .map((row) => ({

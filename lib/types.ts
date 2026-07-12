@@ -15,6 +15,9 @@ export type QualityFilterMode = "off" | "flag" | "exclude";
 /** 建玉の決め方: fixed=defaultShares固定 / risk=リスク許容額から株数を逆算 */
 export type SizingMode = "fixed" | "risk";
 
+/** テーマスコアの計算方式: binary=4条件×二値(現行) / continuous=各条件を連続量に置き換えた0-100 */
+export type ThemeScoringMode = "binary" | "continuous";
+
 export type ThemeStatus = "strong" | "watch" | "weak";
 
 export type WatchPriority = "A" | "B" | "C" | string;
@@ -92,6 +95,10 @@ export interface Rules {
   volumeLongWindow: number;
   volumeDryUpMaxRatio: number;
   volumeFilterMode: QualityFilterMode;
+  themeScoringMode: ThemeScoringMode;
+  themeMomentumBlend5d: number;
+  themeMomentum5dRange: number;
+  themeMomentum20dRange: number;
   scoring: ScoringWeights;
   bollingerPeriod: number;
   bbTouchTolerance: number;
@@ -162,6 +169,14 @@ export interface CandidateResult {
   intradayMemo: string[];
 }
 
+/** 連続テーマスコアの成分(配点適用後・小数1桁丸め)。合計≒themeScore(丸め誤差のみ) */
+export interface ThemeScoreComponents {
+  relativeStrength: number;
+  leaderMa5: number;
+  leaderMa25: number;
+  momentum: number;
+}
+
 export interface ThemeScore {
   theme: string;
   priority: WatchPriority;
@@ -174,6 +189,8 @@ export interface ThemeScore {
   status: ThemeStatus;
   stockCount: number;
   leaderCount: number;
+  /** binaryモードではnull。旧スナップショットのthemeScoresには存在しないため読み手はundefined許容にすること */
+  scoreComponents: ThemeScoreComponents | null;
 }
 
 export interface EvaluationOutput {

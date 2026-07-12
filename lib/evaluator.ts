@@ -1,5 +1,12 @@
 import { averageTrueRangeAt, deviation, max, movingAverageAt, rateOfChangeAt, trendFrom } from "./indicators";
-import { scoreIndividual, scoreTheme, themeStatus } from "./scoring";
+import {
+  percentileOf,
+  relativeStrengthOf,
+  scoreIndividual,
+  scoreTheme,
+  themeScoreComponentsOf,
+  themeStatus
+} from "./scoring";
 import {
   CandidateResult,
   CandidateStatus,
@@ -330,23 +337,38 @@ function evaluateThemes(drafts: CandidateDraft[], rules: Rules): ThemeScore[] {
     };
   });
 
-  const ranked = baseThemes
+  const return5ds = baseThemes.map((theme) => theme.return5d);
+  const return20ds = baseThemes.map((theme) => theme.return20d);
+  const withPercentiles = baseThemes.map((theme) => ({
+    ...theme,
+    percentile5d: percentileOf(theme.return5d, return5ds),
+    percentile20d: percentileOf(theme.return20d, return20ds)
+  }));
+
+  // 順位: binaryは現行どおりreturn5d降順(完全互換)。
+  // continuousは5日/20日パーセンタイルをブレンドした相対強度の降順(タイはテーマ名で安定化)。
+  const ranked = withPercentiles
     .slice()
-    .sort((a, b) => b.return5d - a.return5d)
+    .sort((a, b) =>
+      rules.themeScoringMode === "continuous"
+        ? relativeStrengthOf(b, rules) - relativeStrengthOf(a, rules) || a.theme.localeCompare(b.theme, "ja")
+        : b.return5d - a.return5d
+    )
     .map((theme, index) => ({ ...theme, rank: index + 1 }));
 
   const totalThemes = ranked.length;
   return ranked.map((theme) => {
-    const themeScoreValue = scoreTheme(
-      {
-        rank: theme.rank,
-        totalThemes,
-        leaderMa5AboveRatio: theme.leaderMa5AboveRatio,
-        leaderMa25AboveRatio: theme.leaderMa25AboveRatio,
-        return5d: theme.return5d
-      },
-      rules
-    );
+    const scoreInput = {
+      rank: theme.rank,
+      totalThemes,
+      leaderMa5AboveRatio: theme.leaderMa5AboveRatio,
+      leaderMa25AboveRatio: theme.leaderMa25AboveRatio,
+      return5d: theme.return5d,
+      return20d: theme.return20d,
+      percentile5d: theme.percentile5d,
+      percentile20d: theme.percentile20d
+    };
+    const themeScoreValue = scoreTheme(scoreInput, rules);
 
     return {
       theme: theme.theme,
@@ -359,7 +381,8 @@ function evaluateThemes(drafts: CandidateDraft[], rules: Rules): ThemeScore[] {
       leaderMa25AboveRatio: theme.leaderMa25AboveRatio,
       status: themeStatus(themeScoreValue, rules),
       stockCount: theme.stockCount,
-      leaderCount: theme.leaderCount
+      leaderCount: theme.leaderCount,
+      scoreComponents: themeScoreComponentsOf(scoreInput, rules)
     } satisfies ThemeScore;
   });
 }

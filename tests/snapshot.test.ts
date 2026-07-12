@@ -70,7 +70,8 @@ const themeScoreFixture: ThemeScore = {
   leaderMa25AboveRatio: 1,
   status: "strong",
   stockCount: 5,
-  leaderCount: 3
+  leaderCount: 3,
+  scoreComponents: null
 };
 
 test("snapshotDateOf picks the latest non-null date", () => {

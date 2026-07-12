@@ -11,6 +11,7 @@
     "snapshot": "tsx scripts/snapshot_signals.ts",
     "backtest": "tsx scripts/backtest.ts",
     "analyze:signals": "tsx scripts/analyze_signals.ts",
+    "review:trades": "tsx scripts/review_trades.ts",
     "test": "node --test --import tsx tests/*.test.ts"
   },
   "dependencies": {

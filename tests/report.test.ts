@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stopAtrBand, volumeRatioBand } from "../lib/backtest/report";
+import { stopAtrBand, themeScoreBand, volumeRatioBand } from "../lib/backtest/report";
 
 test("stopAtrBand puts the default threshold 0.3 on a band boundary", () => {
   assert.equal(stopAtrBand(null), "不明");
@@ -9,6 +9,17 @@ test("stopAtrBand puts the default threshold 0.3 on a band boundary", () => {
   assert.equal(stopAtrBand(0.6), "0.6-1.0");
   assert.equal(stopAtrBand(1.0), "1.0-1.5");
   assert.equal(stopAtrBand(1.5), "≥1.5");
+});
+
+test("themeScoreBand puts the thresholds 60/80/90 on band boundaries", () => {
+  assert.equal(themeScoreBand(0), "<60");
+  assert.equal(themeScoreBand(59), "<60");
+  assert.equal(themeScoreBand(60), "60-79"); // 60ちょうどはwatch側
+  assert.equal(themeScoreBand(79), "60-79");
+  assert.equal(themeScoreBand(80), "80-89"); // 80ちょうどは買い基準側
+  assert.equal(themeScoreBand(89), "80-89");
+  assert.equal(themeScoreBand(90), "90-100"); // 90ちょうどはトレンドフォロー側
+  assert.equal(themeScoreBand(100), "90-100");
 });
 
 test("volumeRatioBand puts the default threshold 0.85 on a band boundary", () => {
