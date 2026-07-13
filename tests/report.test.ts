@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stopAtrBand, themeScoreBand, volumeRatioBand } from "../lib/backtest/report";
+import { earningsBand, marketRegimeBand, stopAtrBand, themeScoreBand, volumeRatioBand } from "../lib/backtest/report";
 
 test("stopAtrBand puts the default threshold 0.3 on a band boundary", () => {
   assert.equal(stopAtrBand(null), "不明");
@@ -29,4 +29,19 @@ test("volumeRatioBand puts the default threshold 0.85 on a band boundary", () =>
   assert.equal(volumeRatioBand(0.851), "0.85-1.0");
   assert.equal(volumeRatioBand(1.0), "1.0-1.3");
   assert.equal(volumeRatioBand(1.3), "≥1.3");
+});
+
+test("marketRegimeBand maps true/false/null to OK/NG/不明", () => {
+  assert.equal(marketRegimeBand(true), "OK");
+  assert.equal(marketRegimeBand(false), "NG");
+  assert.equal(marketRegimeBand(null), "不明");
+});
+
+test("earningsBand puts the default exclusion window 3 on a band boundary", () => {
+  assert.equal(earningsBand(null), "不明");
+  assert.equal(earningsBand(0), "0-3日");
+  assert.equal(earningsBand(3), "0-3日"); // 3(=earningsExclusionDays)は除外窓側
+  assert.equal(earningsBand(4), "4-10日");
+  assert.equal(earningsBand(10), "4-10日");
+  assert.equal(earningsBand(11), ">10日");
 });

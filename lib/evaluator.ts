@@ -1,3 +1,5 @@
+import { weekdaysBetween } from "./calendar";
+import { EarningsRow } from "./csv";
 import { averageTrueRangeAt, deviation, max, movingAverageAt, rateOfChangeAt, trendFrom } from "./indicators";
 import {
   percentileOf,
@@ -12,6 +14,7 @@ import {
   CandidateStatus,
   ExitMode,
   EvaluationOutput,
+  MarketCondition,
   PriceRow,
   ProfitWarning,
   RuleReason,
@@ -33,6 +36,7 @@ type CandidateDraft = Omit<CandidateResult, "themeScore" | "themeRank" | "status
     expectedLossWithinLimit: boolean;
     stopNotTooTight: boolean;
     volumeDryUp: boolean;
+    noEarningsSoon: boolean;
   };
 };
 
@@ -40,10 +44,17 @@ export function evaluateCandidates(
   watchlist: WatchlistRow[],
   prices: PriceRow[],
   rules: Rules,
-  generatedAt = new Date().toISOString()
+  generatedAt = new Date().toISOString(),
+  earnings: EarningsRow[] = []
 ): EvaluationOutput {
   const pricesByCode = groupPricesByCode(prices);
-  const drafts = watchlist.map((stock) => evaluateStock(stock, pricesByCode.get(stock.code) ?? [], rules));
+  // 市場レジームは drafts 生成前に一度だけ計算する(全銘柄に等しくかかるマスタースイッチ)
+  const market = marketConditionOf(pricesByCode, rules);
+  const marketRegimeOk = market?.regimeOk ?? null;
+  const earningsByCode = groupEarningsByCode(earnings);
+  const drafts = watchlist.map((stock) =>
+    evaluateStock(stock, pricesByCode.get(stock.code) ?? [], rules, earningsByCode.get(stock.code) ?? [])
+  );
   const themeScores = evaluateThemes(drafts, rules);
   const themeByName = new Map(themeScores.map((theme) => [theme.theme, theme]));
 
@@ -51,8 +62,8 @@ export function evaluateCandidates(
     .map((draft) => {
       const theme = themeByName.get(draft.theme);
       const themeScoreValue = theme?.themeScore ?? 0;
-      const status = classifyCandidate(draft, themeScoreValue, rules);
-      const reasons = reasonsForCandidate(draft, themeScoreValue, status, rules);
+      const status = classifyCandidate(draft, themeScoreValue, rules, marketRegimeOk);
+      const reasons = reasonsForCandidate(draft, themeScoreValue, status, rules, market);
       const exitMode = exitModeFor(draft, themeScoreValue, rules);
       const profitWarnings = computeProfitWarnings(draft, themeScoreValue, theme, rules);
       const { conditions: _conditions, ...candidateDraft } = draft;
@@ -75,8 +86,56 @@ export function evaluateCandidates(
     pricesAsOf: null,
     rules,
     candidates,
-    themeScores
+    themeScores,
+    market
   };
+}
+
+/**
+ * 市場レジーム指標(rules.marketIndexCode)の当日状態。行数不足・指標未取得なら null(不罰)。
+ * regimeOk = 終値が25日線より上 かつ 25日線が上向き(trendFlatTolerance は個別銘柄と同じ定義)。
+ */
+function marketConditionOf(pricesByCode: Map<string, PriceRow[]>, rules: Rules): MarketCondition | null {
+  const rows = pricesByCode.get(rules.marketIndexCode) ?? [];
+  if (rows.length < rules.maMiddle + 1) {
+    return null; // ma25 + 前日ma25(トレンド)に必要な行数
+  }
+
+  const latestIndex = rows.length - 1;
+  const latest = rows[latestIndex];
+  const closes = rows.map((row) => row.close);
+  const ma25 = movingAverageAt(closes, latestIndex, rules.maMiddle);
+  const prevMa25 = movingAverageAt(closes, latestIndex - 1, rules.maMiddle);
+  const ma25Trend = trendFrom(ma25, prevMa25, rules.trendFlatTolerance);
+  const ma25Deviation = deviation(latest.close, ma25);
+  // "flat" は up ではない → 地合いOKは「明確に上向き」のときだけ
+  const regimeOk = ma25 === null ? null : latest.close > ma25 && ma25Trend === "up";
+
+  return {
+    code: rules.marketIndexCode,
+    date: latest.date,
+    close: latest.close,
+    ma25,
+    ma25Deviation,
+    ma25Trend,
+    regimeOk
+  };
+}
+
+/** code → 決算発表日(YYYY-MM-DD)の昇順配列。evaluateStock がその銘柄の直近未来日を引く */
+function groupEarningsByCode(earnings: EarningsRow[]): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+  for (const row of earnings) {
+    const dates = grouped.get(row.code) ?? [];
+    dates.push(row.earningsDate);
+    grouped.set(row.code, dates);
+  }
+
+  for (const dates of grouped.values()) {
+    dates.sort((a, b) => a.localeCompare(b));
+  }
+
+  return grouped;
 }
 
 function groupPricesByCode(prices: PriceRow[]): Map<string, PriceRow[]> {
@@ -95,7 +154,7 @@ function groupPricesByCode(prices: PriceRow[]): Map<string, PriceRow[]> {
   return grouped;
 }
 
-function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): CandidateDraft {
+function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, earningsDates: string[]): CandidateDraft {
   const minimumRows = Math.max(rules.maMiddle + 1, 26);
   if (prices.length < minimumRows) {
     return insufficientCandidate(stock, `価格データが不足しています（${prices.length}/${minimumRows}営業日）`, rules);
@@ -136,6 +195,10 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
   const reward = takeProfit1 !== null && entryPrice !== null ? takeProfit1 - entryPrice : null;
   const rewardR = riskR !== null && riskR > 0 && reward !== null ? reward / riskR : null;
 
+  // 決算接近: 基準日は必ず latest.date(バックテストの過去日評価で当時の未来決算を正しく効かせる)
+  const nextEarningsDate = earningsDates.find((date) => date >= latest.date) ?? null;
+  const daysToEarnings = nextEarningsDate === null ? null : weekdaysBetween(latest.date, nextEarningsDate);
+
   const conditions = {
     ma25TrendUp: ma25Trend === "up",
     closeAboveMa25: ma25 !== null && latest.close > ma25,
@@ -151,7 +214,9 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
     expectedLossWithinLimit: expectedLoss !== null && expectedLoss > 0 && expectedLoss <= rules.maxLossYen,
     // 測定不能(null)は罰しない。フラグ・除外は明確な違反時のみ
     stopNotTooTight: stopDistanceAtr === null || stopDistanceAtr >= rules.stopAtrMinMultiple,
-    volumeDryUp: volumeRatio === null || volumeRatio <= rules.volumeDryUpMaxRatio
+    volumeDryUp: volumeRatio === null || volumeRatio <= rules.volumeDryUpMaxRatio,
+    // 決算未登録(daysToEarnings=null)は罰しない。daysToEarnings=0(評価日=発表日)も除外窓に含む
+    noEarningsSoon: daysToEarnings === null || daysToEarnings > rules.earningsExclusionDays
   };
 
   const individualScore = scoreIndividual(
@@ -188,6 +253,8 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): C
     volumeShortAvg,
     volumeLongAvg,
     volumeRatio,
+    nextEarningsDate,
+    daysToEarnings,
     individualScore,
     entryPrice,
     entryUpperPrice,
@@ -277,6 +344,8 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
     volumeShortAvg: null,
     volumeLongAvg: null,
     volumeRatio: null,
+    nextEarningsDate: null,
+    daysToEarnings: null,
     individualScore: 0,
     entryPrice: null,
     entryUpperPrice: null,
@@ -300,7 +369,8 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
       expectedLossWithinLimit: false,
       // 測定不能は罰しない(null→true と同じ扱い)
       stopNotTooTight: true,
-      volumeDryUp: true
+      volumeDryUp: true,
+      noEarningsSoon: true
     }
   };
 }
@@ -417,7 +487,8 @@ function reasonsForCandidate(
   draft: CandidateDraft,
   themeScoreValue: number,
   status: CandidateStatus,
-  rules: Rules
+  rules: Rules,
+  market: MarketCondition | null
 ): RuleReason[] {
   const reasons = [...draft.reasons];
 
@@ -425,7 +496,7 @@ function reasonsForCandidate(
     return reasons;
   }
 
-  const qualityFlags = qualityFlagReasons(draft, rules);
+  const qualityFlags = qualityFlagReasons(draft, rules, market);
 
   if (status === "buy_candidate") {
     return [
@@ -591,8 +662,11 @@ function reasonsForCandidate(
   return uniqueReasons(reasons);
 }
 
-/** 品質フィルター(flag/exclude)の警告理由。条件がfalseなら測定値は非null(null→条件true)だが、型の絞り込みのため個別に確認する */
-function qualityFlagReasons(draft: CandidateDraft, rules: Rules): RuleReason[] {
+/**
+ * 品質フィルター(flag/exclude)の警告理由。条件がfalseなら測定値は非null(null→条件true)だが、型の絞り込みのため個別に確認する。
+ * market は全銘柄に等しくかかるマスタースイッチ由来なので、close!==null の全候補に同じ理由が付く(呼び出し側で保証)。
+ */
+function qualityFlagReasons(draft: CandidateDraft, rules: Rules, market: MarketCondition | null): RuleReason[] {
   const flags: RuleReason[] = [];
 
   if (
@@ -618,6 +692,39 @@ function qualityFlagReasons(draft: CandidateDraft, rules: Rules): RuleReason[] {
         "押し目中も出来高が減っていない",
         false,
         `直近${rules.volumeShortWindow}日出来高/20日平均 = ${draft.volumeRatio.toFixed(2)} / 基準 ${rules.volumeDryUpMaxRatio} 以下`
+      )
+    );
+  }
+
+  if (
+    rules.earningsFilterMode !== "off" &&
+    !draft.conditions.noEarningsSoon &&
+    draft.nextEarningsDate !== null &&
+    draft.daysToEarnings !== null
+  ) {
+    flags.push(
+      reason(
+        "earnings_soon",
+        "決算発表が近い",
+        false,
+        `次回決算 ${draft.nextEarningsDate}（あと${draft.daysToEarnings}営業日） / 発表${rules.earningsExclusionDays}営業日前から買い見送り`
+      )
+    );
+  }
+
+  if (
+    rules.marketFilterMode !== "off" &&
+    market !== null &&
+    market.regimeOk === false &&
+    market.ma25 !== null &&
+    market.ma25Deviation !== null
+  ) {
+    flags.push(
+      reason(
+        "market_regime_weak",
+        "地合いが弱い（市場が25日線条件を満たさない）",
+        false,
+        `${market.code} 終値 ${market.close.toFixed(0)} / 25日線 ${market.ma25.toFixed(1)}（乖離 ${(market.ma25Deviation * 100).toFixed(2)}% / トレンド ${market.ma25Trend}）`
       )
     );
   }
@@ -672,7 +779,12 @@ function uniqueReasons(reasons: RuleReason[]): RuleReason[] {
   });
 }
 
-function classifyCandidate(draft: CandidateDraft, themeScoreValue: number, rules: Rules): CandidateStatus {
+function classifyCandidate(
+  draft: CandidateDraft,
+  themeScoreValue: number,
+  rules: Rules,
+  marketRegimeOk: boolean | null
+): CandidateStatus {
   if (draft.close === null || draft.ma25 === null || draft.expectedLoss === null) {
     return "avoid";
   }
@@ -701,9 +813,12 @@ function classifyCandidate(draft: CandidateDraft, themeScoreValue: number, rules
 
   if (individualBuy && themeBuy && draft.expectedLoss <= rules.maxLossYen && rewardSufficient) {
     // 品質フィルター(excludeモード時のみ): シナリオ崩壊ではなく押し目の質の問題なので avoid ではなく watch に降格
+    // marketRegimeOk === false の厳密比較が重要(null=測定不能は罰しない)
     const qualityExcluded =
       (rules.stopTightFilterMode === "exclude" && !draft.conditions.stopNotTooTight) ||
-      (rules.volumeFilterMode === "exclude" && !draft.conditions.volumeDryUp);
+      (rules.volumeFilterMode === "exclude" && !draft.conditions.volumeDryUp) ||
+      (rules.marketFilterMode === "exclude" && marketRegimeOk === false) ||
+      (rules.earningsFilterMode === "exclude" && !draft.conditions.noEarningsSoon);
 
     return qualityExcluded ? "watch" : "buy_candidate";
   }

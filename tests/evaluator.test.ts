@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { EarningsRow, toEarningsRows } from "../lib/csv";
 import { averageTrueRangeAt, movingAverageAt } from "../lib/indicators";
 import { evaluateCandidates, expectedLossFor, suggestedSharesFor } from "../lib/evaluator";
 import { scoreIndividual } from "../lib/scoring";
@@ -239,6 +240,261 @@ test("insufficient price history leaves measurements null without flags", () => 
   assert.ok(!candidate.reasons.some((reason) => reason.key === "stop_too_tight" || reason.key === "volume_not_dry"));
 });
 
+// ---- 市場レジーム(地合い)フィルター ----
+
+test("marketConditionOf classifies regime from the index 25-day line", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+
+  const okResult = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", risingCloses())],
+    rules,
+    "2026-05-30T00:00:00.000Z"
+  );
+  assert.ok(okResult.market !== null);
+  assert.equal(okResult.market.regimeOk, true);
+  assert.equal(okResult.market.ma25Trend, "up");
+
+  // 終値 < MA25 だがMA25は上向き → regimeOk=false(乖離マイナス)
+  const weakCloseResult = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", weakCloseCloses())],
+    rules,
+    "2026-05-30T00:00:00.000Z"
+  );
+  assert.ok(weakCloseResult.market !== null);
+  assert.equal(weakCloseResult.market.regimeOk, false);
+  assert.equal(weakCloseResult.market.ma25Trend, "up");
+  assert.ok((weakCloseResult.market.ma25Deviation ?? 0) < 0);
+
+  // MA25下向き → regimeOk=false
+  const downResult = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", decliningCloses())],
+    rules,
+    "2026-05-30T00:00:00.000Z"
+  );
+  assert.ok(downResult.market !== null);
+  assert.equal(downResult.market.ma25Trend, "down");
+  assert.equal(downResult.market.regimeOk, false);
+
+  // 指標行なし → market=null(不罰)
+  const noIndex = evaluateCandidates(watchlist, samplePrices("8002"), rules, "2026-05-30T00:00:00.000Z");
+  assert.equal(noIndex.market, null);
+
+  // 行数不足(<26)→ market=null
+  const shortIndex = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", risingCloses()).slice(0, 10)],
+    rules,
+    "2026-05-30T00:00:00.000Z"
+  );
+  assert.equal(shortIndex.market, null);
+});
+
+test("market flag mode keeps buy_candidate but appends market_regime_weak to all evaluable candidates", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const flagRules: Rules = { ...rules, marketFilterMode: "flag" };
+  const result = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", decliningCloses())],
+    flagRules,
+    "2026-05-30T00:00:00.000Z"
+  );
+  const candidate = result.candidates[0];
+
+  assert.equal(candidate.status, "buy_candidate");
+  assert.ok(candidate.reasons.some((reason) => reason.key === "market_regime_weak"));
+});
+
+test("market exclude mode demotes buy_candidate to watch (not avoid)", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const excludeRules: Rules = { ...rules, marketFilterMode: "exclude" };
+  const result = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", decliningCloses())],
+    excludeRules,
+    "2026-05-30T00:00:00.000Z"
+  );
+  const candidate = result.candidates[0];
+
+  assert.equal(candidate.status, "watch");
+  assert.equal(candidate.individualScore, 100); // スコアは不変
+  assert.ok(candidate.reasons.some((reason) => reason.key === "market_regime_weak"));
+});
+
+test("market off mode and market=null neither flag nor demote", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+
+  // off: 地合いNGでも影響なし
+  const offResult = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", decliningCloses())],
+    { ...rules, marketFilterMode: "off" },
+    "2026-05-30T00:00:00.000Z"
+  );
+  assert.equal(offResult.candidates[0].status, "buy_candidate");
+  assert.ok(!offResult.candidates[0].reasons.some((reason) => reason.key === "market_regime_weak"));
+
+  // market=null: excludeモードでも罰しない(指標行なし)
+  const nullResult = evaluateCandidates(
+    watchlist,
+    samplePrices("8002"),
+    { ...rules, marketFilterMode: "exclude" },
+    "2026-05-30T00:00:00.000Z"
+  );
+  assert.equal(nullResult.candidates[0].status, "buy_candidate");
+  assert.ok(!nullResult.candidates[0].reasons.some((reason) => reason.key === "market_regime_weak"));
+});
+
+test("weak market regime does not change the individual score", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const okScore = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", risingCloses())],
+    { ...rules, marketFilterMode: "exclude" },
+    "2026-05-30T00:00:00.000Z"
+  ).candidates[0].individualScore;
+  const ngScore = evaluateCandidates(
+    watchlist,
+    [...samplePrices("8002"), ...marketSeries("1306", decliningCloses())],
+    { ...rules, marketFilterMode: "exclude" },
+    "2026-05-30T00:00:00.000Z"
+  ).candidates[0].individualScore;
+
+  assert.equal(okScore, 100);
+  assert.equal(ngScore, 100);
+});
+
+// ---- 決算日フィルター ----
+
+test("daysToEarnings picks the first announcement on or after the evaluation date", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+
+  // 過去・未来が順不同。評価日 2026-05-30 以降の最初 = 2026-06-15
+  const earnings: EarningsRow[] = [
+    { code: "8002", earningsDate: "2026-08-01", memo: "" },
+    { code: "8002", earningsDate: "2026-05-10", memo: "" },
+    { code: "8002", earningsDate: "2026-06-15", memo: "" }
+  ];
+  const result = evaluateCandidates(watchlist, samplePrices("8002"), rules, "2026-05-30T00:00:00.000Z", earnings);
+  const candidate = result.candidates[0];
+  assert.equal(candidate.nextEarningsDate, "2026-06-15");
+  assert.ok(candidate.daysToEarnings !== null && candidate.daysToEarnings > 0);
+
+  // 評価日 = 発表日 → daysToEarnings = 0(除外窓に含む)
+  const sameDay = evaluateCandidates(watchlist, samplePrices("8002"), rules, "2026-05-30T00:00:00.000Z", [
+    { code: "8002", earningsDate: "2026-05-30", memo: "" }
+  ]);
+  assert.equal(sameDay.candidates[0].nextEarningsDate, "2026-05-30");
+  assert.equal(sameDay.candidates[0].daysToEarnings, 0);
+});
+
+test("earnings proximity boundary matches earningsExclusionDays (flag mode)", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const flagRules: Rules = { ...rules, earningsFilterMode: "flag" };
+
+  // 評価日 2026-05-30(土)から 2026-06-03(水)=平日3日 → 除外窓内(<= 3)
+  const inWindow = evaluateCandidates(watchlist, samplePrices("8002"), flagRules, "2026-05-30T00:00:00.000Z", [
+    { code: "8002", earningsDate: "2026-06-03", memo: "" }
+  ]).candidates[0];
+  assert.equal(inWindow.daysToEarnings, 3);
+  assert.ok(inWindow.reasons.some((reason) => reason.key === "earnings_soon"));
+
+  // 2026-06-04(木)=平日4日 → 窓の外(> 3)
+  const outWindow = evaluateCandidates(watchlist, samplePrices("8002"), flagRules, "2026-05-30T00:00:00.000Z", [
+    { code: "8002", earningsDate: "2026-06-04", memo: "" }
+  ]).candidates[0];
+  assert.equal(outWindow.daysToEarnings, 4);
+  assert.ok(!outWindow.reasons.some((reason) => reason.key === "earnings_soon"));
+});
+
+test("earnings filter modes: exclude demotes, flag warns, off and empty do nothing", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const near: EarningsRow[] = [{ code: "8002", earningsDate: "2026-06-03", memo: "" }];
+
+  const excluded = evaluateCandidates(
+    watchlist,
+    samplePrices("8002"),
+    { ...rules, earningsFilterMode: "exclude" },
+    "2026-05-30T00:00:00.000Z",
+    near
+  ).candidates[0];
+  assert.equal(excluded.status, "watch");
+  assert.equal(excluded.individualScore, 100);
+  assert.ok(excluded.reasons.some((reason) => reason.key === "earnings_soon"));
+
+  const flagged = evaluateCandidates(
+    watchlist,
+    samplePrices("8002"),
+    { ...rules, earningsFilterMode: "flag" },
+    "2026-05-30T00:00:00.000Z",
+    near
+  ).candidates[0];
+  assert.equal(flagged.status, "buy_candidate");
+  assert.ok(flagged.reasons.some((reason) => reason.key === "earnings_soon"));
+
+  const off = evaluateCandidates(
+    watchlist,
+    samplePrices("8002"),
+    { ...rules, earningsFilterMode: "off" },
+    "2026-05-30T00:00:00.000Z",
+    near
+  ).candidates[0];
+  assert.equal(off.status, "buy_candidate");
+  assert.ok(!off.reasons.some((reason) => reason.key === "earnings_soon"));
+
+  // earnings空 → 影響なし(既定 exclude でも不発)
+  const empty = evaluateCandidates(watchlist, samplePrices("8002"), rules, "2026-05-30T00:00:00.000Z", []).candidates[0];
+  assert.equal(empty.status, "buy_candidate");
+  assert.equal(empty.nextEarningsDate, null);
+  assert.equal(empty.daysToEarnings, null);
+  assert.ok(!empty.reasons.some((reason) => reason.key === "earnings_soon"));
+});
+
+test("earnings proximity is measured from latest.date, not today (backtest consistency)", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  // 評価日は過去(2026-05-30)。当時から見た未来 2026-06-03 と、今日(2026-07-12)より後の 2026-08-01。
+  // latest.date 基準なら最初の未来日は 2026-06-03。今日基準だと 2026-06-03 は過去で選ばれない。
+  const earnings: EarningsRow[] = [
+    { code: "8002", earningsDate: "2026-06-03", memo: "" },
+    { code: "8002", earningsDate: "2026-08-01", memo: "" }
+  ];
+  const candidate = evaluateCandidates(
+    watchlist,
+    samplePrices("8002"),
+    { ...rules, earningsFilterMode: "flag" },
+    "2026-05-30T00:00:00.000Z",
+    earnings
+  ).candidates[0];
+
+  assert.equal(candidate.nextEarningsDate, "2026-06-03");
+  assert.equal(candidate.daysToEarnings, 3);
+});
+
+// ---- toEarningsRows(手動CSVパース) ----
+
+test("toEarningsRows parses, sorts by date, and errors on invalid rows", () => {
+  const rows = toEarningsRows("code,earningsDate,memo\n5803,2026-08-08,\n7011,2026-08-04,1Q決算\n");
+  assert.deepEqual(
+    rows.map((row) => `${row.code}:${row.earningsDate}`),
+    ["7011:2026-08-04", "5803:2026-08-08"]
+  );
+  assert.equal(rows[0].memo, "1Q決算");
+
+  // codeは4桁に正規化される
+  assert.equal(toEarningsRows("code,earningsDate,memo\n83,2026-08-08,\n")[0].code, "0083");
+
+  assert.throws(
+    () => toEarningsRows("code,earningsDate,memo\n7011,2026/08/04,\n"),
+    /earnings.csv 2行目: earningsDate は YYYY-MM-DD/
+  );
+  assert.throws(
+    () => toEarningsRows("code,earningsDate,memo\n,2026-08-04,\n"),
+    /earnings.csv 2行目: code は必須です/
+  );
+});
+
 // ---- テーマスコア(binary互換 / continuous) ----
 
 test("binary mode keeps legacy theme output and null scoreComponents", () => {
@@ -366,4 +622,32 @@ function pricesWithReturns(code: string, r5: number, r20: number): PriceRow[] {
 /** 直近3日の出来高だけ半減させた押し目(売り枯れ)パターン */
 function dryUpPrices(code: string): PriceRow[] {
   return samplePrices(code).map((row, index) => (index >= 27 ? { ...row, volume: 500_000 } : { ...row, volume: 1_000_000 }));
+}
+
+/** 市場指標(1306)用の30本系列。任意のcloses配列から生成する(>=26本で market が非null) */
+function marketSeries(code: string, closes: number[]): PriceRow[] {
+  return closes.map((close, index) => ({
+    code,
+    date: `2026-05-${String(index + 1).padStart(2, "0")}`,
+    open: close,
+    high: close + 1,
+    low: close - 1,
+    close,
+    volume: 1_000_000
+  }));
+}
+
+/** 明確な上昇(終値>MA25・MA25上向き → regimeOk=true) */
+function risingCloses(): number[] {
+  return Array.from({ length: 30 }, (_, index) => 1000 + index * 10);
+}
+
+/** 上昇後に最終日だけ下押し(終値<MA25 だがMA25はまだ上向き → regimeOk=false) */
+function weakCloseCloses(): number[] {
+  return [...Array.from({ length: 29 }, (_, index) => 1000 + index * 10), 1100];
+}
+
+/** 明確な下降(MA25下向き → regimeOk=false) */
+function decliningCloses(): number[] {
+  return Array.from({ length: 30 }, (_, index) => 1300 - index * 10);
 }

@@ -1,9 +1,18 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { analyzeBbWatch } from "./bbWatch";
-import { toPriceRows, toWatchlistRows } from "./csv";
+import { EarningsRow, toEarningsRows, toPriceRows, toWatchlistRows } from "./csv";
 import { evaluateCandidates } from "./evaluator";
-import { BbWatchResult, CandidateResult, EvaluationOutput, PriceRow, Rules, ThemeScore, WatchlistRow } from "./types";
+import {
+  BbWatchResult,
+  CandidateResult,
+  EvaluationOutput,
+  MarketCondition,
+  PriceRow,
+  Rules,
+  ThemeScore,
+  WatchlistRow
+} from "./types";
 
 const root = process.cwd();
 
@@ -28,6 +37,15 @@ export function readPricesForCode(code: string): PriceRow[] {
   return readPrices().filter((row) => row.code === code);
 }
 
+export function readEarnings(): EarningsRow[] {
+  const filePath = resolvePath("data/earnings.csv");
+  if (!existsSync(filePath)) {
+    return [];
+  }
+
+  return toEarningsRows(readText("data/earnings.csv"));
+}
+
 export function readEvaluation(): EvaluationOutput {
   const rules = readRules();
   const generatedCandidates = readJsonFile<CandidateResult[]>("data/candidates.json", []);
@@ -40,11 +58,13 @@ export function readEvaluation(): EvaluationOutput {
       pricesAsOf,
       rules,
       candidates: generatedCandidates,
-      themeScores: generatedThemes
+      themeScores: generatedThemes,
+      market: readJsonFile<MarketCondition | null>("data/market.json", null)
     };
   }
 
-  return { ...evaluateCandidates(readWatchlist(), readPrices(), rules), pricesAsOf };
+  // generatedAt はデフォルト(現在時刻)を使うため undefined を渡す
+  return { ...evaluateCandidates(readWatchlist(), readPrices(), rules, undefined, readEarnings()), pricesAsOf };
 }
 
 export function readBbWatch(): BbWatchResult[] {

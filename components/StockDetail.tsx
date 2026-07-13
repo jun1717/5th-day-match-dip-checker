@@ -66,6 +66,14 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
             <Detail label="参考セクター" value={sectors} />
             <Detail label="終値" value={formatNumber(primary.close)} />
             <Detail label="出来高" value={formatNumber(primary.volume)} />
+            <Detail
+              label="次回決算"
+              value={
+                primary.nextEarningsDate == null
+                  ? "未登録"
+                  : `${primary.nextEarningsDate}（あと${primary.daysToEarnings}営業日）`
+              }
+            />
             <Detail label="個別押し目スコア" value={<ScoreBadge score={primary.individualScore} />} />
             <Detail label="最上位テーマ資金スコア" value={<ScoreBadge score={primary.themeScore} />} />
           </div>

@@ -6,6 +6,7 @@ import {
   csvCell,
   formatTable,
   groupBy,
+  marketRegimeBand,
   meanOf,
   num,
   pct,
@@ -87,6 +88,8 @@ interface AnalyzedSignal {
   snapshotDate: string;
   rulesHash: string;
   candidate: SlimCandidate;
+  /** そのスナップショット日の地合い(旧スナップショットは market が無いため null) */
+  marketRegimeOk: boolean | null;
   fwd5: number | null;
   fwd20: number | null;
   trade: SimulatedTrade | null;
@@ -106,7 +109,12 @@ for (const file of snapshotFiles) {
     candidate.volumeRatio ??= null;
     candidate.suggestedShares ??= null;
     candidate.positionCost ??= null;
+    candidate.nextEarningsDate ??= null;
+    candidate.daysToEarnings ??= null;
   }
+
+  // 旧スナップショットに market フィールドは無い → ?? null で吸収(不明扱い)
+  const marketRegimeOk = snapshot.market?.regimeOk ?? null;
 
   const targets = snapshot.candidates.filter(
     (candidate) => (candidate.status === "buy_candidate" || candidate.status === "watch") && candidate.date === snapshot.snapshotDate
@@ -168,7 +176,7 @@ for (const file of snapshotFiles) {
       missingFields += 1;
     }
 
-    analyzed.push({ snapshotDate: snapshot.snapshotDate, rulesHash: snapshot.rulesHash, candidate, fwd5, fwd20, trade });
+    analyzed.push({ snapshotDate: snapshot.snapshotDate, rulesHash: snapshot.rulesHash, candidate, marketRegimeOk, fwd5, fwd20, trade });
   }
 }
 
@@ -192,7 +200,7 @@ function performanceCsv(records: AnalyzedSignal[]): string {
   const headers = [
     "snapshotDate", "code", "name", "theme", "status", "individualScore", "themeScore", "rewardR", "exitMode", "rulesHash",
     "fwd5", "fwd20", "filled", "noFillReason", "entryDate", "entryFillPrice", "exitDate", "exitPrice", "exitReason",
-    "holdDays", "pnlYen", "rMultiple", "suggestedShares", "stopDistanceAtr", "volumeRatio"
+    "holdDays", "pnlYen", "rMultiple", "suggestedShares", "stopDistanceAtr", "volumeRatio", "marketRegimeOk", "daysToEarnings"
   ];
 
   const lines = records.map((record) =>
@@ -221,7 +229,9 @@ function performanceCsv(records: AnalyzedSignal[]): string {
       record.trade?.rMultiple === undefined || record.trade === null ? "" : record.trade.rMultiple.toFixed(3),
       record.candidate.suggestedShares ?? "",
       record.candidate.stopDistanceAtr === null ? "" : record.candidate.stopDistanceAtr.toFixed(3),
-      record.candidate.volumeRatio === null ? "" : record.candidate.volumeRatio.toFixed(3)
+      record.candidate.volumeRatio === null ? "" : record.candidate.volumeRatio.toFixed(3),
+      record.marketRegimeOk === null ? "" : record.marketRegimeOk,
+      record.candidate.daysToEarnings ?? ""
     ]
       .map(csvCell)
       .join(",")
@@ -279,6 +289,15 @@ function printSummary(): void {
     a[0].localeCompare(b[0])
   );
   console.log(formatTable(headers, byRules.map(([hash, group]) => [hash, ...summaryRows(group)])));
+
+  console.log("\n## status × 地合い(OK/NG/不明)別");
+  const buyAndWatch = analyzed.filter(
+    (record) => record.candidate.status === "buy_candidate" || record.candidate.status === "watch"
+  );
+  const byStatusRegime = Array.from(
+    groupBy(buyAndWatch, (record) => `${record.candidate.status} × ${marketRegimeBand(record.marketRegimeOk)}`).entries()
+  ).sort((a, b) => a[0].localeCompare(b[0]));
+  console.log(formatTable(headers, byStatusRegime.map(([key, group]) => [key, ...summaryRows(group)])));
 
   console.log(`\n出力: ${path.relative(root, outDir)}/signal_performance.csv`);
 }

@@ -162,6 +162,8 @@ function slimCandidate(overrides: Partial<SlimCandidate> = {}): SlimCandidate {
     atr: 3,
     stopDistanceAtr: 1.2,
     volumeRatio: 0.8,
+    nextEarningsDate: null,
+    daysToEarnings: null,
     individualScore: 100,
     themeScore: 100,
     themeRank: 1,
@@ -187,7 +189,8 @@ function snapshotOf(date: string, candidates: SlimCandidate[]): SignalSnapshot {
     generatedAt: `${date}T07:30:00.000Z`,
     rulesHash: "abcdef123456",
     candidates,
-    themeScores: []
+    themeScores: [],
+    market: null
   };
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CandidateTable } from "../components/CandidateTable";
+import { MarketMetricCard } from "../components/MarketBadge";
 import { ThemeRanking } from "../components/ThemeRanking";
 import { readEvaluation } from "../lib/data";
 import { formatPricesAsOf } from "../lib/format";
@@ -35,6 +36,7 @@ export default function HomePage() {
           <div className="metric-label">見送り件数</div>
           <div className="metric-value">{avoidCandidates.length}</div>
         </div>
+        <MarketMetricCard market={evaluation.market} marketIndexCode={evaluation.rules.marketIndexCode} />
       </section>
 
       <div className="grid" style={{ marginTop: 16 }}>

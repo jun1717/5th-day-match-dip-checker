@@ -131,6 +131,40 @@ export function toExecutionRows(text: string): ExecutionRow[] {
   return rows.slice().sort((a, b) => a.executedAt.localeCompare(b.executedAt));
 }
 
+export interface EarningsRow {
+  code: string;
+  earningsDate: string; // YYYY-MM-DD
+  memo: string;
+}
+
+/**
+ * data/earnings.csv のパース。手動記録ファイルのため不正行は黙ってスキップせず
+ * 行番号付きでエラーにする(toExecutionRows と同じ思想)。日付昇順にソートして返す。
+ */
+export function toEarningsRows(text: string): EarningsRow[] {
+  const rows = parseCsv(text).map((row, index) => {
+    const line = index + 2; // ヘッダーが1行目
+    const earningsDate = row.earningsDate ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(earningsDate)) {
+      throw new Error(`earnings.csv ${line}行目: earningsDate は YYYY-MM-DD 形式で指定してください: "${earningsDate}"`);
+    }
+
+    const rawCode = (row.code ?? "").trim();
+    if (rawCode === "") {
+      throw new Error(`earnings.csv ${line}行目: code は必須です`);
+    }
+
+    return {
+      code: normalizeCode(rawCode),
+      earningsDate,
+      memo: row.memo ?? ""
+    };
+  });
+
+  // 同一銘柄の複数四半期を正しく引くため日付昇順に整列する(安定ソート)
+  return rows.slice().sort((a, b) => a.earningsDate.localeCompare(b.earningsDate));
+}
+
 export function toPriceRows(text: string): PriceRow[] {
   return parseCsv(text)
     .map((row) => ({

@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WATCHLIST_PATH = ROOT / "data" / "watchlist.csv"
 PRICES_PATH = ROOT / "data" / "prices.csv"
 AS_OF_PATH = ROOT / "data" / "prices_as_of.json"
+RULES_PATH = ROOT / "config" / "rules.json"
 
 JST = timezone(timedelta(hours=9))
 
@@ -29,7 +30,15 @@ def read_watchlist() -> list[dict[str, str]]:
         return list(csv.DictReader(file))
 
 
-def unique_codes(stocks: list[dict[str, str]]) -> list[str]:
+def read_rules() -> dict:
+    with RULES_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def unique_codes(stocks: list[dict[str, str]], market_index_code: str | None = None) -> list[str]:
+    """ウォッチリストのユニークcode一覧。market_index_code が指定され、まだ含まれていなければ末尾に追加する。
+    "^"始まりのcode(例 ^N225)はyfinanceティッカーそのまま扱うためnormalize_codeを通さない。
+    """
     codes: list[str] = []
     seen: set[str] = set()
 
@@ -40,6 +49,12 @@ def unique_codes(stocks: list[dict[str, str]]) -> list[str]:
 
         seen.add(code)
         codes.append(code)
+
+    if market_index_code:
+        index_code = market_index_code if market_index_code.startswith("^") else normalize_code(market_index_code)
+        if index_code not in seen:
+            seen.add(index_code)
+            codes.append(index_code)
 
     return codes
 
@@ -130,11 +145,14 @@ def main() -> int:
         print("yfinance が見つかりません。先に `python3 -m pip install -r requirements.txt` を実行してください。", file=sys.stderr)
         return 1
 
+    rules = read_rules()
+    market_index_code = rules.get("marketIndexCode")
+
     rows: list[dict[str, str | int | float]] = []
     prices_as_of: str | None = None
 
-    for code in unique_codes(read_watchlist()):
-        ticker = f"{code}.T"
+    for code in unique_codes(read_watchlist(), market_index_code):
+        ticker = code if code.startswith("^") else f"{code}.T"
         try:
             data = yf.download(
                 ticker, period=args.period, interval="1d", auto_adjust=args.auto_adjust, progress=False

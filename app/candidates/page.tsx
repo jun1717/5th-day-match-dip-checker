@@ -1,4 +1,5 @@
 import { CandidateTable } from "../../components/CandidateTable";
+import { MarketSummaryLine } from "../../components/MarketBadge";
 import { readEvaluation } from "../../lib/data";
 
 export default function CandidatesPage() {
@@ -10,6 +11,7 @@ export default function CandidatesPage() {
         <div>
           <h1 className="page-title">候補一覧</h1>
           <p className="page-meta">買い候補を最上位に表示</p>
+          <MarketSummaryLine market={evaluation.market} marketIndexCode={evaluation.rules.marketIndexCode} />
         </div>
       </div>
 

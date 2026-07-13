@@ -3,6 +3,7 @@ import {
   CandidateResult,
   CandidateStatus,
   ExitMode,
+  MarketCondition,
   ThemeScore,
   Trend,
   WatchlistKey,
@@ -32,6 +33,8 @@ export interface SlimCandidate {
   atr: number | null;
   stopDistanceAtr: number | null;
   volumeRatio: number | null;
+  nextEarningsDate: string | null;
+  daysToEarnings: number | null;
   individualScore: number;
   themeScore: number;
   themeRank: number | null;
@@ -55,6 +58,7 @@ export interface SignalSnapshot {
   rulesHash: string;
   candidates: SlimCandidate[];
   themeScores: ThemeScore[];
+  market: MarketCondition | null;
 }
 
 export function rulesHashOf(rawRulesText: string): string {
@@ -97,6 +101,8 @@ export function toSlimCandidate(candidate: CandidateResult): SlimCandidate {
     atr: candidate.atr,
     stopDistanceAtr: candidate.stopDistanceAtr,
     volumeRatio: candidate.volumeRatio,
+    nextEarningsDate: candidate.nextEarningsDate,
+    daysToEarnings: candidate.daysToEarnings,
     individualScore: candidate.individualScore,
     themeScore: candidate.themeScore,
     themeRank: candidate.themeRank,
@@ -119,6 +125,7 @@ export function buildSnapshot(
   candidates: CandidateResult[],
   themeScores: ThemeScore[],
   rulesHash: string,
+  market: MarketCondition | null,
   generatedAt = new Date().toISOString()
 ): SignalSnapshot | null {
   const snapshotDate = snapshotDateOf(candidates);
@@ -131,6 +138,7 @@ export function buildSnapshot(
     generatedAt,
     rulesHash,
     candidates: candidates.map(toSlimCandidate),
-    themeScores
+    themeScores,
+    market
   };
 }

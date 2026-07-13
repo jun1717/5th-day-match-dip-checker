@@ -131,7 +131,7 @@ button {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -153,6 +153,12 @@ button {
   font-size: 32px;
   font-weight: 700;
   line-height: 1;
+}
+
+.metric-note {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .surface {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildSnapshot, rulesHashOf, snapshotDateOf, toSlimCandidate } from "../lib/snapshot";
-import { CandidateResult, ThemeScore } from "../lib/types";
+import { CandidateResult, MarketCondition, ThemeScore } from "../lib/types";
 
 function candidateFixture(overrides: Partial<CandidateResult> = {}): CandidateResult {
   return {
@@ -34,6 +34,8 @@ function candidateFixture(overrides: Partial<CandidateResult> = {}): CandidateRe
     volumeShortAvg: 900000,
     volumeLongAvg: 1000000,
     volumeRatio: 0.9,
+    nextEarningsDate: "2026-08-04",
+    daysToEarnings: 18,
     individualScore: 100,
     themeScore: 100,
     themeRank: 1,
@@ -74,6 +76,16 @@ const themeScoreFixture: ThemeScore = {
   scoreComponents: null
 };
 
+const marketFixture: MarketCondition = {
+  code: "1306",
+  date: "2026-07-10",
+  close: 2850,
+  ma25: 2800,
+  ma25Deviation: 0.0178,
+  ma25Trend: "up",
+  regimeOk: true
+};
+
 test("snapshotDateOf picks the latest non-null date", () => {
   const candidates = [
     candidateFixture({ date: "2026-07-09" }),
@@ -102,6 +114,8 @@ test("toSlimCandidate keeps analysis fields and converts reasons to keys", () =>
   assert.equal(slim.volumeRatio, 0.9);
   assert.equal(slim.suggestedShares, 100);
   assert.equal(slim.positionCost, 599985);
+  assert.equal(slim.nextEarningsDate, "2026-08-04");
+  assert.equal(slim.daysToEarnings, 18);
   assert.deepEqual(slim.reasonKeys, ["buy_setup_ready"]);
 
   const keys = Object.keys(slim);
@@ -119,6 +133,7 @@ test("buildSnapshot assembles snapshot with date, hash and slim candidates", () 
     [candidateFixture({ date: "2026-07-09" }), candidateFixture({ date: "2026-07-10" })],
     [themeScoreFixture],
     "a1b2c3d4e5f6",
+    marketFixture,
     "2026-07-10T07:35:00.000Z"
   );
 
@@ -131,8 +146,18 @@ test("buildSnapshot assembles snapshot with date, hash and slim candidates", () 
 });
 
 test("buildSnapshot returns null when no candidate has a date", () => {
-  const snapshot = buildSnapshot([candidateFixture({ date: null })], [themeScoreFixture], "a1b2c3d4e5f6");
+  const snapshot = buildSnapshot([candidateFixture({ date: null })], [themeScoreFixture], "a1b2c3d4e5f6", null);
   assert.equal(snapshot, null);
+});
+
+test("buildSnapshot transcribes the market condition (including null)", () => {
+  const withMarket = buildSnapshot([candidateFixture()], [themeScoreFixture], "a1b2c3d4e5f6", marketFixture);
+  assert.ok(withMarket !== null);
+  assert.deepEqual(withMarket.market, marketFixture);
+
+  const withoutMarket = buildSnapshot([candidateFixture()], [themeScoreFixture], "a1b2c3d4e5f6", null);
+  assert.ok(withoutMarket !== null);
+  assert.equal(withoutMarket.market, null);
 });
 
 test("rulesHashOf is a stable 12-char sha256 prefix", () => {

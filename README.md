@@ -98,7 +98,7 @@ npm run dev
 
 **2026年7月の検証で `binary` 維持を判断しました**（continuousは境界フリップが減らず、閾値80に中位テーマが流入して期待値Rが劣化。詳細と較正案は `docs/backtest-results/2026-07-theme-scoring.md`）。continuousの再検証は `npm run backtest -- --theme-scoring continuous` でいつでもできます。
 
-最終判定は個別押し目スコア、テーマ資金スコア、想定損失、25日線割れなどのハード条件を組み合わせて、買い候補、監視、見送りに分類します。見送りや監視の理由は `reasons` 配列に、`ma5_too_far_above`、`entry_upper_exceeded`、`theme_weak`、`ma25_broken`、`ma25_trend_down`、`expected_loss_too_large`、`position_cost_too_large`、`breakout_type`、`ma25_pullback_type`、`missing_price_data`、`reward_r_too_low`、`profit_target_near`、`profit_warning_overheated`、`stop_too_tight`、`volume_not_dry` などで保存します。
+最終判定は個別押し目スコア、テーマ資金スコア、想定損失、25日線割れなどのハード条件を組み合わせて、買い候補、監視、見送りに分類します。見送りや監視の理由は `reasons` 配列に、`ma5_too_far_above`、`entry_upper_exceeded`、`theme_weak`、`ma25_broken`、`ma25_trend_down`、`expected_loss_too_large`、`position_cost_too_large`、`breakout_type`、`ma25_pullback_type`、`missing_price_data`、`reward_r_too_low`、`profit_target_near`、`profit_warning_overheated`、`stop_too_tight`、`volume_not_dry`、`market_regime_weak`、`earnings_soon` などで保存します。
 
 ### 建玉（株数）の決め方
 
@@ -119,6 +119,45 @@ npm run dev
 モードは `off`（無効）/ `flag`（理由として表示するだけ。既定）/ `exclude`（買い候補を監視に降格。見送りにはしない）の3段階です。excludeへの昇格はバックテストのバンド別成績で効果を確認してから行ってください（下記バックテスト参照）。
 
 注意: 場中の実行では当日の出来高が途中集計のため出来高比が実際より低く出ます（ドライアップ判定が通りやすい偽陽性方向）。確定判定は大引け後のスナップショットで行われます。
+
+### 地合い（市場レジーム）フィルター・決算日フィルター
+
+個別銘柄・テーマのスコアとは独立した、買い候補の採用を抑制するための2つのゲートです。どちらも個別スコア（100点満点）・テーマスコアの配点には影響しません。
+
+**地合いフィルター**: `marketIndexCode`（既定 `"1306"` = NEXT FUNDS TOPIX連動型上場投信）を `data/prices.csv` の一部として毎日取得し、「終値が25日線より上 かつ 25日線が上向き（横ばいはNG）」を地合いOKと定義します。地合いNGのとき、`marketFilterMode`（既定 `flag`）が `exclude` なら買い候補を監視に降格します（見送りにはしません）。地合いは全銘柄に等しくかかるマスタースイッチなので、NG時は価格データのある全候補の `reasons` に `market_regime_weak` が付きます。日経平均で見たい場合は `marketIndexCode` を `"1321"`（日経225連動型上場投信）に変えるだけで切り替えられます。指標の価格データが無い・行数不足のときは地合い判定そのものが `null`（不明）になり、フィルターは不発（全候補が地合いOK扱い）になります——測定不能を罰しない、という他の品質フィルターと同じ原則です。
+
+**決算日フィルター**: 手動管理の `data/earnings.csv` から銘柄ごとの次回決算発表日を引き、発表 `earningsExclusionDays`（既定3営業日）前（発表当日を含む）から買い候補を監視に降格します。損切りを前日安値に置く設計は決算ギャップ（発表を受けた寄り付きの急変動）の前では機能せず、寄りで損切りラインを飛び越えて想定損失（`maxLossYen`）の前提が崩れるための防御です。`earningsFilterMode` の既定は他の品質フィルターと異なり `exclude` です。これは性能仮説ではなくリスク上限の不変条件だからで、導入時点の `earnings.csv` は空なので実質不発（データを入れた分だけ効く安全な既定）で始まります。理由キーは `earnings_soon` です。
+
+`data/earnings.csv` の仕様:
+
+```csv
+code,earningsDate,memo
+7011,2026-08-04,1Q決算
+5803,2026-08-08,
+```
+
+- 1行＝1決算イベント。`code`: 銘柄コード（watchlistと同じ扱い）。`earningsDate`: 発表日（YYYY-MM-DD）。`memo`: 自由記述（省略可）。
+- **四半期ごとに手動で追記**します。発表日は証券会社アプリ・会社IRページ・適時開示カレンダーで確認してください。
+- **過去の行は消さないでください**。履歴として溜めることで、将来バックテスト（`--earnings-filter` によるA/B比較）で「決算またぎ除外は本当に効いたか」を検証できるようになります。
+- ファイルが存在しない・ヘッダーのみでも全機能が動きます（不発なだけで壊れません）。存在して不正な行（日付形式が `YYYY-MM-DD` でない、`code` が空など）があれば、実行時に行番号付きのエラーで止まります（黙ってスキップしません）。
+
+営業日は**平日（月〜金）近似**で数え、日本の祝日は考慮しません。祝日を挟むと除外窓が実質1営業日前後ずれることがありますが、`earnings.csv` 自体が手動管理の近似データであるため許容しています（心配な場合は `earningsExclusionDays` を増やして運用してください）。
+
+両フィルターとも `off`（無効）/ `flag`（理由表示のみ）/ `exclude`（買い候補を監視に降格）の3段階です。地合いフィルターは品質フィルターと同じ**段階導入方針**（既定flag、バックテストで効果を確認してからexclude昇格を判断）に従います。決算フィルターだけは上記の理由で既定exclude採用済みです。
+
+**2026年7月の検証で地合いフィルターは `flag` 維持を判断しました**（excludeは期待値R 0.67→0.49・最大DDも悪化。個別・テーマ条件が実質的な地合いフィルターとして既に機能しており、検証期間の地合いNG日はむしろ深押しからの好機だった。ただしNG日サンプルが薄く持続的な下落相場を含まないため、**次の本格的なベア相場を経験した後に必ず再検証すること**。詳細は `docs/backtest-results/2026-07-market-filter.md`）。
+
+地合いフィルターのA/B検証コマンド例（バックテスト用データに市場指標の価格行が入っている必要があります）:
+
+```bash
+python3 scripts/fetch_prices.py
+python3 scripts/fetch_prices.py --period 2y --output data/prices_backtest.csv --no-intraday --auto-adjust
+
+npm run backtest -- --market-filter flag --out data/backtest/market-baseline
+npm run backtest -- --market-filter exclude --out data/backtest/market-exclude
+```
+
+読み方は「最大ドローダウン（円）の改善」を主指標にしつつ、期待値Rの改善・約定数の残存率・地合いOK日/NG日のコホート表（`summary.cohortsByBand.marketRegime`）を確認します。検証結果と判断は `docs/backtest-results/2026-07-market-filter.md` に記録済みです。決算フィルターは `earnings.csv` に履歴データが無いため2026年7月時点では検証スコープ外ですが、履歴が溜まった段階で `npm run backtest -- --earnings-filter off` とのA/Bで「決算またぎトレードの成績」を検証できます（`daysToEarnings` バンド別集計は実装済み）。
 
 ### 損切りライン
 
@@ -239,6 +278,4 @@ npm run review:trades -- --month 2026-07 --prices data/prices_backtest.csv
 ## MVPで未実装
 
 - リアルタイム5分足判定
-- TOPIX比較
-- 決算日フィルター
 - 自動売買

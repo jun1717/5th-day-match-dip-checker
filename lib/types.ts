@@ -95,6 +95,10 @@ export interface Rules {
   volumeLongWindow: number;
   volumeDryUpMaxRatio: number;
   volumeFilterMode: QualityFilterMode;
+  marketIndexCode: string;
+  marketFilterMode: QualityFilterMode;
+  earningsExclusionDays: number;
+  earningsFilterMode: QualityFilterMode;
   themeScoringMode: ThemeScoringMode;
   themeMomentumBlend5d: number;
   themeMomentum5dRange: number;
@@ -148,6 +152,10 @@ export interface CandidateResult {
   volumeShortAvg: number | null;
   volumeLongAvg: number | null;
   volumeRatio: number | null;
+  /** 評価日(latest.date)以降で最初の決算発表日。data/earnings.csv に該当が無ければnull */
+  nextEarningsDate: string | null;
+  /** 評価日から nextEarningsDate までの平日数(祝日近似)。nextEarningsDate=null なら null(不罰) */
+  daysToEarnings: number | null;
   individualScore: number;
   themeScore: number;
   themeRank: number | null;
@@ -193,12 +201,25 @@ export interface ThemeScore {
   scoreComponents: ThemeScoreComponents | null;
 }
 
+/** 市場レジーム指標(TOPIX連動ETF等)の当日状態。指標データが無い/不足のときは EvaluationOutput.market = null */
+export interface MarketCondition {
+  code: string;
+  date: string;
+  close: number;
+  ma25: number | null;
+  ma25Deviation: number | null;
+  ma25Trend: Trend;
+  /** 地合いOK = 終値が25日線より上 かつ 25日線が上向き。ma25計算不能ならnull(不罰) */
+  regimeOk: boolean | null;
+}
+
 export interface EvaluationOutput {
   generatedAt: string;
   pricesAsOf: string | null;
   rules: Rules;
   candidates: CandidateResult[];
   themeScores: ThemeScore[];
+  market: MarketCondition | null;
 }
 
 export type BollingerLine = "ma25" | "bb_minus_1sigma" | "bb_minus_2sigma";
