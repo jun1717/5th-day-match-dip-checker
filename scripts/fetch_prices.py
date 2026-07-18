@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import sys
+import time
 from datetime import date, timedelta, timezone
 from pathlib import Path
 
@@ -57,6 +58,28 @@ def unique_codes(stocks: list[dict[str, str]], market_index_code: str | None = N
             codes.append(index_code)
 
     return codes
+
+
+def download_with_retry(ticker: str, *, period: str, auto_adjust: bool, attempts: int = 3):
+    """yfinanceの一時的な失敗(GitHub Actions等クラウドIPからのレート制限が主因)に対して
+    指数バックオフでリトライする。最終試行の結果(空DataFrameも含む)をそのまま返す。
+    """
+    import yfinance as yf
+
+    data = None
+    for attempt in range(attempts):
+        if attempt > 0:
+            time.sleep(2**attempt)  # 2s, 4s
+        try:
+            data = yf.download(ticker, period=period, interval="1d", auto_adjust=auto_adjust, progress=False)
+        except Exception as exc:
+            if attempt == attempts - 1:
+                raise
+            print(f"warning: {ticker} の取得に失敗(試行{attempt + 1}/{attempts}): {exc}", file=sys.stderr)
+            continue
+        if not data.empty:
+            return data
+    return data
 
 
 def fetch_today_row(ticker: str, code: str) -> tuple[dict, str] | None:
@@ -154,15 +177,13 @@ def main() -> int:
     for code in unique_codes(read_watchlist(), market_index_code):
         ticker = code if code.startswith("^") else f"{code}.T"
         try:
-            data = yf.download(
-                ticker, period=args.period, interval="1d", auto_adjust=args.auto_adjust, progress=False
-            )
+            data = download_with_retry(ticker, period=args.period, auto_adjust=args.auto_adjust)
         except Exception as exc:
-            print(f"warning: {ticker} の取得に失敗しました: {exc}", file=sys.stderr)
+            print(f"warning: {ticker} の取得に失敗しました(リトライ後も失敗): {exc}", file=sys.stderr)
             continue
 
         if data.empty:
-            print(f"warning: {ticker} の価格データが空でした", file=sys.stderr)
+            print(f"warning: {ticker} の価格データが空でした(リトライ後も空)", file=sys.stderr)
             continue
 
         if isinstance(data.columns, pd.MultiIndex):

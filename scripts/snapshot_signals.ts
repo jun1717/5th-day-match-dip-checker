@@ -18,8 +18,10 @@ const rulesHash = rulesHashOf(rawRules);
 const snapshot = buildSnapshot(candidates, themeScores, rulesHash, market);
 
 if (snapshot === null) {
-  console.error("warning: 全候補の date が null のためスナップショットを作成しません");
-  process.exit(0);
+  // 全候補が missing_price_data ということは、この実行では価格データが1件も取得できていない
+  // (fetch_prices.py の失敗)。CIで気づけるよう黙って成功にせず失敗させる。
+  console.error("error: 全候補の date が null です(価格データを1件も取得できていません)。fetch_prices.py の実行結果を確認してください。");
+  process.exit(1);
 }
 
 const signalsDir = path.join(root, "data/history/signals");
