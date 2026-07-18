@@ -36,7 +36,7 @@
   "sizingMode": "risk",
   "lotSize": 100,
   "allowFractionalShares": false,
-  "maxPositionYen": null,
+  "maxPositionYen": 1000000,
   "volumeShortWindow": 3,
   "volumeLongWindow": 20,
   "volumeDryUpMaxRatio": 0.85,
