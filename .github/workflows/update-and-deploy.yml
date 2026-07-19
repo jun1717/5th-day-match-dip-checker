@@ -55,20 +55,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 7 * * 1-5'
         run: npm run snapshot
 
-      - name: Commit signal history
-        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 7 * * 1-5'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/history
-          if git diff --cached --quiet; then
-            echo "no snapshot changes"
-          else
-            git commit -m "chore: snapshot signals $(TZ=Asia/Tokyo date +%Y-%m-%d) [skip ci]"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-
       - name: Set base path from repo name
         id: base
         run: echo "path=/${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
@@ -86,3 +72,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # デプロイ後に実行: 履歴コミットが失敗してもサイト更新(確定日足の反映)を巻き添えにしない
+      - name: Commit signal history
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 7 * * 1-5'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history
+          if git diff --cached --quiet; then
+            echo "no snapshot changes"
+          else
+            git commit -m "chore: snapshot signals $(TZ=Asia/Tokyo date +%Y-%m-%d) [skip ci]"
+            # fetch/evaluate が残す未ステージの追跡ファイル変更があると素のrebaseは拒否されるため --autostash 必須
+            git pull --rebase --autostash origin main
+            git push origin HEAD:main
+          fi
