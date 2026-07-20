@@ -24,7 +24,7 @@ import {
 } from "./types";
 
 const BUY_ACTION =
-  "9:30〜10:00に確認。現在値が買い基準価格より高ければ、買い基準価格で指値注文。約定しなければ追いかけない。現在値が買い基準価格以下なら、5分足の下げ止まり確認後のみ成行買い。損切りラインは前日に決めた位置から下げない。";
+  "今夜のうちに翌朝の注文をセット: 買い基準価格に指値、損切りライン（シグナル日の安値）に逆指値を同時に入れる。株数は画面の株数欄。買い上限価格を超えては追わない。翌朝、寄りが損切りライン以下で始まったら注文を取り消して見送り。指値に届かなければ諦める。";
 
 type CandidateDraft = Omit<CandidateResult, "themeScore" | "themeRank" | "status" | "tomorrowAction" | "exitMode" | "profitWarnings"> & {
   conditions: {
@@ -195,6 +195,16 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, ea
   const reward = takeProfit1 !== null && entryPrice !== null ? takeProfit1 - entryPrice : null;
   const rewardR = riskR !== null && riskR > 0 && reward !== null ? reward / riskR : null;
 
+  // 翌朝注文用: 損切り=シグナル日安値(low(D))で株数・想定損失を再計算する。
+  // バックテスト(stopMode="prev-day")のサイジングと同じ基準(lib/backtest/engine.ts参照)。
+  // 判定(status/conditions)は従来どおり stopLoss=low(D-1) 基準のまま(検証済みロジックを変えない)
+  const signalDayLow = latest.low;
+  const orderRiskR = entryPrice !== null && entryPrice > signalDayLow ? entryPrice - signalDayLow : null;
+  const orderShares = suggestedSharesFor(entryPrice, orderRiskR, rules);
+  const orderPositionCost = entryPrice !== null && orderShares !== null ? entryPrice * orderShares : null;
+  const orderExpectedLoss = orderRiskR === null ? null : expectedLossFor(entryPrice, signalDayLow, orderRiskR, orderShares, rules);
+  const orderRewardR = orderRiskR !== null && orderRiskR > 0 && reward !== null ? reward / orderRiskR : null;
+
   // 決算接近: 基準日は必ず latest.date(バックテストの過去日評価で当時の未来決算を正しく効かせる)
   const nextEarningsDate = earningsDates.find((date) => date >= latest.date) ?? null;
   const daysToEarnings = nextEarningsDate === null ? null : weekdaysBetween(latest.date, nextEarningsDate);
@@ -259,16 +269,21 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, ea
     entryPrice,
     entryUpperPrice,
     stopLoss,
+    signalDayLow,
     suggestedShares,
     positionCost,
     expectedLoss,
+    orderShares,
+    orderPositionCost,
+    orderExpectedLoss,
+    orderRewardR,
     recentHigh20,
     takeProfit1,
     riskR,
     reward,
     rewardR,
     reasons: [],
-    intradayMemo: intradayMemoFor(rules),
+    orderChecklist: orderChecklistFor(rules),
     conditions
   };
 }
@@ -350,16 +365,21 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
     entryPrice: null,
     entryUpperPrice: null,
     stopLoss: null,
+    signalDayLow: null,
     suggestedShares: null,
     positionCost: null,
     expectedLoss: null,
+    orderShares: null,
+    orderPositionCost: null,
+    orderExpectedLoss: null,
+    orderRewardR: null,
     recentHigh20: null,
     takeProfit1: null,
     riskR: null,
     reward: null,
     rewardR: null,
     reasons: [reason("missing_price_data", "株価データが不足", false, detail)],
-    intradayMemo: intradayMemoFor(rules),
+    orderChecklist: orderChecklistFor(rules),
     conditions: {
       ma25TrendUp: false,
       closeAboveMa25: false,
@@ -850,15 +870,19 @@ function actionForStatus(status: CandidateStatus): string {
   return "条件未達。25日線の向き、テーマ資金スコア、想定損失が改善するまで見送り。";
 }
 
-function intradayMemoFor(rules: Rules): string[] {
+/** 運用マニュアル「注文の組み方」と同じ手順(夜に注文を組み、朝は裁量を挟まない) */
+function orderChecklistFor(rules: Rules): string[] {
+  const sharesItem =
+    rules.sizingMode === "risk"
+      ? `株数 = 画面の「株数」欄（リスク${rules.maxLossYen.toLocaleString("ja-JP")}円 ÷ (買い指値 − 損切りライン) を${rules.lotSize}株単位で切り捨て済み）。0株なら見送り`
+      : `株数 = ${rules.defaultShares.toLocaleString("ja-JP")}株（固定）`;
+
   return [
-    "現在値が損切りラインより上",
-    `現在値で買っても想定損失${rules.maxLossYen.toLocaleString("ja-JP")}円以内`,
-    "直近5分足が陽線",
-    "直近5分足終値が1本前の5分足高値を上回る",
-    "直近2本の5分足で安値を切り上げ",
-    "当日安値を更新していない",
-    "テーマ主役株が複数崩れていない"
+    "買い指値 = 買い基準価格。買い上限価格を超えては絶対に追わない",
+    "損切り逆指値 = 損切りライン（シグナル日の安値）。買い注文と同時にセットし、エントリー後は動かさない",
+    sharesItem,
+    "翌朝、寄りが損切りライン以下で始まったら（ギャップダウン）注文を取り消して見送り",
+    "指値に届かなかったら縁がなかったと諦める。場中に思いついた売買はしない"
   ];
 }
 

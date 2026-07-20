@@ -209,7 +209,9 @@ export function reviewClosedLot(
   const candidate = match?.candidate ?? null;
   const flags = entryFlags(lot.buyPrice, lot.shares, match);
 
-  if (candidate?.stopLoss != null && lot.sellPrice < candidate.stopLoss * (1 - options.stopTolerance)) {
+  // 損切りの基準はドクトリン(翌朝エントリーの損切り=シグナル日の安値)。旧スナップショットはstopLoss(D-1安値)で代用
+  const doctrineStop = candidate?.signalDayLow ?? candidate?.stopLoss;
+  if (doctrineStop != null && lot.sellPrice < doctrineStop * (1 - options.stopTolerance)) {
     flags.push("late_stop");
   }
 
@@ -256,7 +258,8 @@ export function reviewOpenLot(
 
   const rows = pricesByCode.get(lot.code);
   const lastClose = rows !== undefined && rows.length > 0 ? rows[rows.length - 1].close : null;
-  const stopLoss = candidate?.stopLoss ?? null;
+  // ドクトリンの損切りライン(シグナル日の安値)。旧スナップショットはstopLoss(D-1安値)で代用
+  const stopLoss = candidate?.signalDayLow ?? candidate?.stopLoss ?? null;
 
   // 損切りライン割れを保有中 = ドクトリン違反の最重要警告
   if (lastClose !== null && stopLoss !== null && lastClose < stopLoss) {
@@ -299,7 +302,9 @@ function entryFlags(buyPrice: number, shares: number, match: SignalMatch | null)
     flags.push("chase_entry");
   }
 
-  if (match.candidate.suggestedShares != null && match.candidate.suggestedShares > 0 && shares > match.candidate.suggestedShares) {
+  // 基準は翌朝注文用の株数(orderShares=シグナル日安値基準)。旧スナップショットはsuggestedShares(D-1安値基準)で代用
+  const allowedShares = match.candidate.orderShares ?? match.candidate.suggestedShares;
+  if (allowedShares != null && allowedShares > 0 && shares > allowedShares) {
     flags.push("over_sized");
   }
 

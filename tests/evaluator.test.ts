@@ -176,6 +176,25 @@ test("maxPositionYen intentionally breaks parity by capping position cost", () =
   assert.ok(candidate.reasons.some((reason) => reason.key === "position_cost_too_large"));
 });
 
+test("order fields are recomputed from the signal-day low (next-morning entry basis)", () => {
+  const watchlist = [watchlistRow("8002", "商社")];
+  const testRules: Rules = { ...rules, sizingMode: "risk", maxPositionYen: null };
+  const result = evaluateCandidates(watchlist, samplePrices("8002"), testRules, "2026-05-30T00:00:00.000Z");
+  const candidate = result.candidates[0];
+
+  // samplePrices: 前日(D-1)安値=166、シグナル日(D)安値=165。stopLossは従来どおりD-1、注文用はD基準
+  assert.equal(candidate.stopLoss, 166);
+  assert.equal(candidate.signalDayLow, 165);
+
+  const entry = candidate.entryPrice!;
+  const orderRiskR = entry - 165;
+  const expectedShares = Math.floor(testRules.maxLossYen / orderRiskR / testRules.lotSize) * testRules.lotSize;
+  assert.equal(candidate.orderShares, expectedShares);
+  assert.equal(candidate.orderExpectedLoss, orderRiskR * expectedShares);
+  assert.equal(candidate.orderPositionCost, entry * expectedShares);
+  assert.equal(candidate.orderRewardR, candidate.reward! / orderRiskR);
+});
+
 // ---- 出来高ドライアップ / 品質フィルター ----
 
 test("volumeRatio compares short window volume to long window volume", () => {

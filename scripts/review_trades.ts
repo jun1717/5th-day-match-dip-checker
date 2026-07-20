@@ -139,9 +139,10 @@ function reviewCsv(records: LotReview[]): string {
       candidate?.status ?? "",
       candidate?.entryPrice?.toFixed(1) ?? "",
       candidate?.entryUpperPrice?.toFixed(1) ?? "",
-      candidate?.stopLoss ?? "",
+      // 逸脱判定(late_stop/over_sized)と同じドクトリン基準。旧スナップショットはD-1安値基準にフォールバック
+      candidate?.signalDayLow ?? candidate?.stopLoss ?? "",
       candidate?.takeProfit1 ?? "",
-      candidate?.suggestedShares ?? "",
+      candidate?.orderShares ?? candidate?.suggestedShares ?? "",
       record.entrySlippagePct === null ? "" : record.entrySlippagePct.toFixed(4),
       record.flags.join(";"),
       record.virtual?.exitDate ?? "",

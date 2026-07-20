@@ -42,9 +42,14 @@ function candidateFixture(overrides: Partial<CandidateResult> = {}): CandidateRe
     entryPrice: 5999.85,
     entryUpperPrice: 6059.55,
     stopLoss: 5900,
+    signalDayLow: 5950,
     suggestedShares: 100,
     positionCost: 599985,
     expectedLoss: 9985,
+    orderShares: 200,
+    orderPositionCost: 1199970,
+    orderExpectedLoss: 9970,
+    orderRewardR: 8.03,
     recentHigh20: 6400,
     takeProfit1: 6400,
     riskR: 99.85,
@@ -55,8 +60,8 @@ function candidateFixture(overrides: Partial<CandidateResult> = {}): CandidateRe
     reasons: [
       { key: "buy_setup_ready", label: "買い候補条件を満たしている", passed: true, detail: "..." }
     ],
-    tomorrowAction: "9:30〜10:00に確認。",
-    intradayMemo: ["現在値が損切りラインより上"],
+    tomorrowAction: "今夜のうちに翌朝の注文をセット。",
+    orderChecklist: ["買い指値 = 買い基準価格"],
     ...overrides
   };
 }
@@ -114,13 +119,15 @@ test("toSlimCandidate keeps analysis fields and converts reasons to keys", () =>
   assert.equal(slim.volumeRatio, 0.9);
   assert.equal(slim.suggestedShares, 100);
   assert.equal(slim.positionCost, 599985);
+  assert.equal(slim.signalDayLow, 5950);
+  assert.equal(slim.orderShares, 200);
   assert.equal(slim.nextEarningsDate, "2026-08-04");
   assert.equal(slim.daysToEarnings, 18);
   assert.deepEqual(slim.reasonKeys, ["buy_setup_ready"]);
 
   const keys = Object.keys(slim);
   assert.ok(!keys.includes("tomorrowAction"));
-  assert.ok(!keys.includes("intradayMemo"));
+  assert.ok(!keys.includes("orderChecklist"));
   assert.ok(!keys.includes("profitWarnings"));
   assert.ok(!keys.includes("reasons"));
   // 比率があれば復元不要のため生の出来高平均はスナップショットに保存しない

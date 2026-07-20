@@ -111,6 +111,8 @@ for (const file of snapshotFiles) {
     candidate.positionCost ??= null;
     candidate.nextEarningsDate ??= null;
     candidate.daysToEarnings ??= null;
+    candidate.signalDayLow ??= null;
+    candidate.orderShares ??= null;
   }
 
   // 旧スナップショットに market フィールドは無い → ?? null で吸収(不明扱い)
@@ -136,9 +138,10 @@ for (const file of snapshotFiles) {
   const fallbackShares = sharesFor(snapshot.rulesHash);
 
   for (const candidate of byCode.values()) {
-    // riskモードのスナップショットは推奨株数を持つ。旧形式・fixedモードはルール版のdefaultShares
-    const shares =
-      candidate.suggestedShares !== null && candidate.suggestedShares > 0 ? candidate.suggestedShares : fallbackShares;
+    // 株数は翌朝注文用(orderShares=シグナル日安値基準)を優先。旧スナップショットはsuggestedShares(D-1安値基準)、
+    // どちらも無ければルール版のdefaultShares。stopMode="prev-day"のシミュレーションと同じ基準になる
+    const sharesBasis = candidate.orderShares ?? candidate.suggestedShares;
+    const shares = sharesBasis !== null && sharesBasis > 0 ? sharesBasis : fallbackShares;
     const rows = rowsByCode.get(candidate.code);
     const index = indexByCode.get(candidate.code)?.get(snapshot.snapshotDate);
 

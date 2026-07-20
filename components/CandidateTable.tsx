@@ -29,11 +29,11 @@ type SortKey =
   | "themeScore"
   | "entryPrice"
   | "entryUpperPrice"
-  | "stopLoss"
-  | "suggestedShares"
-  | "expectedLoss"
+  | "signalDayLow"
+  | "orderShares"
+  | "orderExpectedLoss"
   | "takeProfit1"
-  | "rewardR";
+  | "orderRewardR";
 
 const statusOrder: Record<CandidateStatus, number> = {
   buy_candidate: 0,
@@ -71,6 +71,7 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
     <div>
       <div className="toolbar">
         <span className="muted">{rows.length}件表示</span>
+        <span className="muted">損切りライン・株数・想定損失・リワードRは翌朝の注文用（シグナル日の安値基準）。そのまま注文に使えます</span>
         <label className="toggle">
           <input type="checkbox" checked={showAvoid} onChange={(event) => setShowAvoid(event.target.checked)} />
           見送りを表示
@@ -94,11 +95,11 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
               <SortableHeader label="テーマスコア" sortKey="themeScore" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="買い基準価格" sortKey="entryPrice" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="買い上限価格" sortKey="entryUpperPrice" currentKey={sortKey} direction={direction} onSort={updateSort} />
-              <SortableHeader label="損切りライン" sortKey="stopLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
-              <SortableHeader label="株数" sortKey="suggestedShares" currentKey={sortKey} direction={direction} onSort={updateSort} />
-              <SortableHeader label="想定損失" sortKey="expectedLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="損切りライン" sortKey="signalDayLow" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="株数" sortKey="orderShares" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="想定損失" sortKey="orderExpectedLoss" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <SortableHeader label="第1利確ライン" sortKey="takeProfit1" currentKey={sortKey} direction={direction} onSort={updateSort} />
-              <SortableHeader label="リワードR" sortKey="rewardR" currentKey={sortKey} direction={direction} onSort={updateSort} />
+              <SortableHeader label="リワードR" sortKey="orderRewardR" currentKey={sortKey} direction={direction} onSort={updateSort} />
               <th>利確方針</th>
               <th>判定理由</th>
               <th>明日の行動</th>
@@ -133,17 +134,21 @@ export function CandidateTable({ candidates, maxLossYen, defaultShowAvoid = fals
                 </td>
                 <td className="text-right">{formatNumber(candidate.entryPrice)}</td>
                 <td className="text-right">{formatNumber(candidate.entryUpperPrice)}</td>
-                <td className="text-right">{formatNumber(candidate.stopLoss)}</td>
-                <td className="text-right">{formatNumber(candidate.suggestedShares)}</td>
+                <td className="text-right">{formatNumber(candidate.signalDayLow)}</td>
                 <td className="text-right">
-                  <span className={candidate.expectedLoss !== null && candidate.expectedLoss > maxLossYen ? "badge danger" : ""}>
-                    {formatYen(candidate.expectedLoss)}
+                  <span className={candidate.orderShares === 0 ? "badge fail" : ""}>
+                    {candidate.orderShares === 0 ? "0（見送り）" : formatNumber(candidate.orderShares)}
+                  </span>
+                </td>
+                <td className="text-right">
+                  <span className={candidate.orderExpectedLoss !== null && candidate.orderExpectedLoss > maxLossYen ? "badge danger" : ""}>
+                    {formatYen(candidate.orderExpectedLoss)}
                   </span>
                 </td>
                 <td className="text-right">{formatNumber(candidate.takeProfit1)}</td>
                 <td className="text-right">
-                  <span className={candidate.rewardR !== null && candidate.rewardR < 1.0 ? "badge fail" : ""}>
-                    {formatRewardR(candidate.rewardR)}
+                  <span className={candidate.orderRewardR !== null && candidate.orderRewardR < 1.0 ? "badge fail" : ""}>
+                    {formatRewardR(candidate.orderRewardR)}
                   </span>
                 </td>
                 <td>{exitModeLabel(candidate.exitMode)}</td>

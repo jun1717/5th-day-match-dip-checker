@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { analyzeBbWatch } from "./bbWatch";
 import { EarningsRow, toEarningsRows, toPriceRows, toWatchlistRows } from "./csv";
@@ -65,6 +65,22 @@ export function readEvaluation(): EvaluationOutput {
 
   // generatedAt はデフォルト(現在時刻)を使うため undefined を渡す
   return { ...evaluateCandidates(readWatchlist(), readPrices(), rules, undefined, readEarnings()), pricesAsOf };
+}
+
+/** data/history/signals/ にある YYYY-MM-DD.json の最大日付。ディレクトリ不存在・0件は null */
+export function readLatestSnapshotDate(): string | null {
+  const dirPath = resolvePath("data/history/signals");
+  if (!existsSync(dirPath)) {
+    return null;
+  }
+
+  // ゼロ埋めISO日付は辞書順=時系列順なので文字列比較で最大を取れる
+  const dates = readdirSync(dirPath)
+    .filter((file) => /^\d{4}-\d{2}-\d{2}\.json$/.test(file))
+    .map((file) => file.slice(0, -".json".length))
+    .sort();
+
+  return dates.length > 0 ? dates[dates.length - 1] : null;
 }
 
 export function readBbWatch(): BbWatchResult[] {

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { CandidateTable } from "../components/CandidateTable";
+import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MarketMetricCard } from "../components/MarketBadge";
 import { ThemeRanking } from "../components/ThemeRanking";
-import { readEvaluation } from "../lib/data";
+import { readEvaluation, readLatestSnapshotDate } from "../lib/data";
 import { formatPricesAsOf } from "../lib/format";
 
 export default function HomePage() {
@@ -22,6 +23,12 @@ export default function HomePage() {
           候補一覧へ
         </Link>
       </div>
+
+      <FreshnessBanner
+        pricesAsOf={evaluation.pricesAsOf}
+        latestSnapshotDate={readLatestSnapshotDate()}
+        dataDate={evaluation.candidates[0]?.date ?? null}
+      />
 
       <section className="metrics" aria-label="候補件数">
         <div className="metric">

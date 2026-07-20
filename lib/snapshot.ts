@@ -40,8 +40,13 @@ export interface SlimCandidate {
   themeRank: number | null;
   entryPrice: number | null;
   entryUpperPrice: number | null;
+  /** シグナル日前日(D-1)の安値。翌朝エントリーの損切りは signalDayLow を参照 */
   stopLoss: number | null;
+  /** シグナル日(D)の安値=翌朝エントリーの損切りライン。2026-07以前の旧スナップショットには存在しないため読み手はundefined許容にすること */
+  signalDayLow: number | null;
   suggestedShares: number | null;
+  /** 翌朝注文用の株数(signalDayLow基準)。旧スナップショットには存在しないため読み手はundefined許容にすること */
+  orderShares: number | null;
   positionCost: number | null;
   expectedLoss: number | null;
   takeProfit1: number | null;
@@ -109,7 +114,9 @@ export function toSlimCandidate(candidate: CandidateResult): SlimCandidate {
     entryPrice: candidate.entryPrice,
     entryUpperPrice: candidate.entryUpperPrice,
     stopLoss: candidate.stopLoss,
+    signalDayLow: candidate.signalDayLow,
     suggestedShares: candidate.suggestedShares,
+    orderShares: candidate.orderShares,
     positionCost: candidate.positionCost,
     expectedLoss: candidate.expectedLoss,
     takeProfit1: candidate.takeProfit1,

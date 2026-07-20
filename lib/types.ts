@@ -161,10 +161,21 @@ export interface CandidateResult {
   themeRank: number | null;
   entryPrice: number | null;
   entryUpperPrice: number | null;
+  /** シグナル日前日(D-1)の安値。当日(D)エントリー時の損切り基準で、バックテストのstopLossSignalと同じ意味。
+   *  翌朝(D+1)エントリーの損切りは signalDayLow を使うこと */
   stopLoss: number | null;
+  /** シグナル日(D)の安値。翌朝エントリーの損切りライン(=「エントリー日の前日の安値」ドクトリン)で、
+   *  バックテストの stopMode="prev-day" と同じ基準。画面の損切り表示はこちら */
+  signalDayLow: number | null;
   suggestedShares: number | null;
   positionCost: number | null;
   expectedLoss: number | null;
+  /** 翌朝注文用: signalDayLow を損切りとして再計算した株数・投入額・想定損失・リワードR。
+   *  買い指値(entryPrice)が損切り以下で注文が成立しない場合は null */
+  orderShares: number | null;
+  orderPositionCost: number | null;
+  orderExpectedLoss: number | null;
+  orderRewardR: number | null;
   recentHigh20: number | null;
   takeProfit1: number | null;
   riskR: number | null;
@@ -174,7 +185,7 @@ export interface CandidateResult {
   profitWarnings: ProfitWarning[];
   reasons: RuleReason[];
   tomorrowAction: string;
-  intradayMemo: string[];
+  orderChecklist: string[];
 }
 
 /** 連続テーマスコアの成分(配点適用後・小数1桁丸め)。合計≒themeScore(丸め誤差のみ) */

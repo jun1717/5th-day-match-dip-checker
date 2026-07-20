@@ -47,7 +47,7 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
           prices={prices}
           entryPrice={primary.entryPrice}
           entryUpperPrice={primary.entryUpperPrice}
-          stopLoss={primary.stopLoss}
+          stopLoss={primary.signalDayLow}
         />
       </section>
 
@@ -167,10 +167,10 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
           <div className="detail-grid">
             <Detail label="買い基準価格" value={formatNumber(primary.entryPrice)} />
             <Detail label="買い上限価格" value={formatNumber(primary.entryUpperPrice)} />
-            <Detail label="損切りライン" value={formatNumber(primary.stopLoss)} />
-            <Detail label="推奨株数" value={formatNumber(primary.suggestedShares)} />
-            <Detail label="概算投入額" value={formatYen(primary.positionCost)} />
-            <Detail label="想定損失" value={formatYen(primary.expectedLoss)} />
+            <Detail label="損切りライン（シグナル日の安値）" value={formatNumber(primary.signalDayLow)} />
+            <Detail label="推奨株数" value={formatNumber(primary.orderShares)} />
+            <Detail label="概算投入額" value={formatYen(primary.orderPositionCost)} />
+            <Detail label="想定損失" value={formatYen(primary.orderExpectedLoss)} />
             <Detail label="ATR(14日)" value={formatNumber(primary.atr, 1)} />
             <Detail label="損切り幅(ATR倍)" value={primary.stopDistanceAtr === null ? "-" : `${primary.stopDistanceAtr.toFixed(2)} ATR`} />
             <Detail label="出来高比(3日/20日)" value={primary.volumeRatio === null ? "-" : primary.volumeRatio.toFixed(2)} />
@@ -194,7 +194,7 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
             />
             <Detail
               label="損切りシナリオ"
-              value={`前日安値（${formatNumber(primary.stopLoss)}円）を終値で割り込んだら即撤退`}
+              value={`シグナル日の安値（${formatNumber(primary.signalDayLow)}円）に逆指値を買いと同時にセット。エントリー後は動かさない`}
             />
             <Detail
               label="利確シナリオ"
@@ -204,8 +204,8 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
             <Detail
               label="リワードR"
               value={
-                <span className={primary.rewardR !== null && primary.rewardR < 1.0 ? "badge fail" : ""}>
-                  {formatRewardR(primary.rewardR)}
+                <span className={primary.orderRewardR !== null && primary.orderRewardR < 1.0 ? "badge fail" : ""}>
+                  {formatRewardR(primary.orderRewardR)}
                 </span>
               }
             />
@@ -250,11 +250,11 @@ export function StockDetail({ candidates, prices, bbWatch }: StockDetailProps) {
 
       <section className="surface">
         <div className="surface-header">
-          <h2 className="surface-title">当日9:30〜10:00の判断メモ</h2>
+          <h2 className="surface-title">翌朝の注文チェックリスト</h2>
         </div>
         <div className="surface-body">
           <ul className="memo-list">
-            {primary.intradayMemo.map((memo) => (
+            {primary.orderChecklist.map((memo) => (
               <li className="memo-item" key={memo}>
                 {memo}
               </li>

@@ -170,7 +170,9 @@ function slimCandidate(overrides: Partial<SlimCandidate> = {}): SlimCandidate {
     entryPrice: 100.5,
     entryUpperPrice: 101.5,
     stopLoss: 97,
+    signalDayLow: 98,
     suggestedShares: 300,
+    orderShares: 300,
     positionCost: 30150,
     expectedLoss: 1050,
     takeProfit1: 110,
@@ -327,8 +329,8 @@ test("review flags rule deviations from the matched signal", () => {
 });
 
 test("late_stop puts the tolerance boundary on the safe side", () => {
-  // stopLoss=100 / tolerance 0.5% → 99.5ちょうどはセーフ、下回るとフラグ
-  const snapshots = snapshotsMap(snapshotOf("2026-07-09", [slimCandidate({ stopLoss: 100 })]));
+  // ドクトリンの損切り=signalDayLow(シグナル日の安値)=100 / tolerance 0.5% → 99.5ちょうどはセーフ、下回るとフラグ
+  const snapshots = snapshotsMap(snapshotOf("2026-07-09", [slimCandidate({ signalDayLow: 100 })]));
   const prices = reviewPrices();
 
   const safe = reviewClosedLot(closedLot({ sellPrice: 99.5, pnlYen: -130 }), snapshots, prices);
@@ -336,6 +338,32 @@ test("late_stop puts the tolerance boundary on the safe side", () => {
 
   const late = reviewClosedLot(closedLot({ sellPrice: 99.49, pnlYen: -131 }), snapshots, prices);
   assert.ok(late.flags.includes("late_stop"));
+});
+
+test("legacy snapshots without signalDayLow/orderShares fall back to stopLoss/suggestedShares", () => {
+  // 2026-07以前のスナップショットには新フィールドが無い(JSONパース後undefined)
+  const legacy = slimCandidate({ stopLoss: 100, suggestedShares: 300 });
+  delete (legacy as Partial<SlimCandidate>).signalDayLow;
+  delete (legacy as Partial<SlimCandidate>).orderShares;
+  const snapshots = snapshotsMap(snapshotOf("2026-07-09", [legacy]));
+  const prices = reviewPrices();
+
+  // late_stop は stopLoss 基準にフォールバック
+  const late = reviewClosedLot(closedLot({ sellPrice: 99.49, pnlYen: -131 }), snapshots, prices);
+  assert.ok(late.flags.includes("late_stop"));
+
+  // over_sized は suggestedShares 基準にフォールバック
+  const oversized = reviewClosedLot(closedLot({ shares: 400 }), snapshots, prices);
+  assert.ok(oversized.flags.includes("over_sized"));
+});
+
+test("over_sized uses orderShares (next-morning basis) when present", () => {
+  // orderShares=400 > suggestedShares=300: 400株までセーフ、超えたらフラグ
+  const snapshots = snapshotsMap(snapshotOf("2026-07-09", [slimCandidate({ orderShares: 400 })]));
+  const prices = reviewPrices();
+
+  assert.ok(!reviewClosedLot(closedLot({ shares: 400 }), snapshots, prices).flags.includes("over_sized"));
+  assert.ok(reviewClosedLot(closedLot({ shares: 500 }), snapshots, prices).flags.includes("over_sized"));
 });
 
 test("virtual result is null when prices do not cover the signal date", () => {
@@ -351,7 +379,7 @@ test("virtual result is null when prices do not cover the signal date", () => {
 // ---- reviewOpenLot ----
 
 test("open lot below the stop line is flagged as holding_below_stop", () => {
-  const snapshots = snapshotsMap(snapshotOf("2026-07-09", [slimCandidate({ stopLoss: 97 })]));
+  const snapshots = snapshotsMap(snapshotOf("2026-07-09", [slimCandidate({ signalDayLow: 97 })]));
   const prices = new Map([
     [
       "5803",
