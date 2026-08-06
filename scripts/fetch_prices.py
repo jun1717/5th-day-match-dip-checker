@@ -8,7 +8,7 @@ import csv
 import json
 import sys
 import time
-from datetime import date, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -82,8 +82,38 @@ def download_with_retry(ticker: str, *, period: str, auto_adjust: bool, attempts
     return data
 
 
-def fetch_today_row(ticker: str, code: str) -> tuple[dict, str] | None:
-    """当日の分足データからOHLCVを集計して返す。(row, as_of_iso) のタプル。データがなければ None。"""
+def fetch_regular_market_time(ticker: str) -> str | None:
+    """取引所が公表する直近の終値時刻(JSTのISO8601)。取得できなければ None。
+
+    分足の最終バーは終値基準時刻として使えない。東証はザラバが15:25で終わり、15:25〜15:30は
+    クロージング・オークション(板寄せ)のため、1分足は15:24/15:25で止まり15:30に到達しない。
+    終値は板寄せで確定して日足にだけ載る。結果、分足由来の as_of は「大引け(15:30)以降か」の
+    判定を常に偽で通過してしまい、確定日足を出していても確定前警告が消えなくなる。
+
+    regularMarketTime は場中なら直近気配の時刻、大引け後はちょうど15:30を返すため、
+    そのまま確定判定に使える。取得が遅れて15:30未満のうちは警告側に倒れる(安全側)。
+    """
+    import yfinance as yf
+
+    try:
+        metadata = yf.Ticker(ticker).history_metadata
+        market_time = metadata.get("regularMarketTime")
+    except Exception as exc:
+        print(f"warning: {ticker} の終値基準時刻の取得に失敗しました: {exc}", file=sys.stderr)
+        return None
+
+    if not isinstance(market_time, (int, float)):
+        print(f"warning: {ticker} の regularMarketTime が取得できませんでした", file=sys.stderr)
+        return None
+
+    return datetime.fromtimestamp(market_time, JST).isoformat()
+
+
+def fetch_today_row(ticker: str, code: str) -> dict | None:
+    """当日の分足データを集計した日足行。データがなければ None。
+
+    Yahooの日足に当日の途中バーが載らない場合だけ使う補完用。
+    """
     import pandas as pd
     import yfinance as yf
 
@@ -113,15 +143,7 @@ def fetch_today_row(ticker: str, code: str) -> tuple[dict, str] | None:
     if any(pd.isna(v) for v in [open_price, high_price, low_price, close_price, volume]):
         return None
 
-    # 最終バーの時刻をJSTに変換
-    last_ts = today_data.index[-1]
-    if last_ts.tzinfo is not None:
-        jst_time = last_ts.astimezone(JST)
-    else:
-        jst_time = last_ts.replace(tzinfo=JST)
-    as_of = jst_time.isoformat()
-
-    row = {
+    return {
         "code": code,
         "date": today.strftime("%Y-%m-%d"),
         "open": round(float(open_price), 2),
@@ -130,7 +152,6 @@ def fetch_today_row(ticker: str, code: str) -> tuple[dict, str] | None:
         "close": round(float(close_price), 2),
         "volume": int(volume),
     }
-    return row, as_of
 
 
 def parse_args() -> argparse.Namespace:
@@ -216,16 +237,16 @@ def main() -> int:
                 }
             )
 
-        # 当日の基準時刻が未確定なら分足から取得（日足の途中バーには時刻情報がないため）
-        if not args.no_intraday:
-            has_today = any(r["date"] == today_str for r in daily_rows)
-            if prices_as_of is None:
-                result = fetch_today_row(ticker, code)
-                if result:
-                    today_row, as_of = result
-                    prices_as_of = as_of
-                    if not has_today:
-                        daily_rows.append(today_row)
+        # 終値基準時刻は最初に取得できた銘柄のものを全体の代表とする(取引所共通のため)。
+        # 分足の追加取得も同じ理由でここに限定する — 全銘柄で叩くとレート制限に触れやすい。
+        if not args.no_intraday and prices_as_of is None:
+            prices_as_of = fetch_regular_market_time(ticker)
+
+            # 日足に当日バーが無いときだけ分足集計で補う(通常はYahooの日足に途中バーが入る)
+            if not any(r["date"] == today_str for r in daily_rows):
+                today_row = fetch_today_row(ticker, code)
+                if today_row is not None:
+                    daily_rows.append(today_row)
 
         rows.extend(daily_rows)
 
