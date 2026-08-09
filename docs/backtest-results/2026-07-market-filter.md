@@ -53,6 +53,8 @@ excludeは事前基準の4条件のうち**約定数(97%残存)以外のすべ�
 
 ## 決算日フィルターについて
 
+> ※ 決算日フィルターは 2026-08 に機能ごと削除された([2026-08-earnings-filter-removal.md](2026-08-earnings-filter-removal.md) 参照)。以下は当時の記述。
+
 `earningsFilterMode = "exclude"`(既定)はリスク上限の不変条件として導入済みだが、`data/earnings.csv` が空のため本検証では不発(両構成とも同一条件)。決算日データが溜まった後、`npm run backtest -- --earnings-filter off` とのA/Bと `daysToEarnings` バンド別集計(0-3日/4-10日/>10日)で「決算またぎトレードの成績」を検証できる。
 
 ## 注意事項(結果の解釈)

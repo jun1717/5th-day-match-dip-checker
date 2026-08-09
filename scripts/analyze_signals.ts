@@ -109,8 +109,6 @@ for (const file of snapshotFiles) {
     candidate.volumeRatio ??= null;
     candidate.suggestedShares ??= null;
     candidate.positionCost ??= null;
-    candidate.nextEarningsDate ??= null;
-    candidate.daysToEarnings ??= null;
     candidate.signalDayLow ??= null;
     candidate.orderShares ??= null;
   }
@@ -203,7 +201,7 @@ function performanceCsv(records: AnalyzedSignal[]): string {
   const headers = [
     "snapshotDate", "code", "name", "theme", "status", "individualScore", "themeScore", "rewardR", "exitMode", "rulesHash",
     "fwd5", "fwd20", "filled", "noFillReason", "entryDate", "entryFillPrice", "exitDate", "exitPrice", "exitReason",
-    "holdDays", "pnlYen", "rMultiple", "suggestedShares", "stopDistanceAtr", "volumeRatio", "marketRegimeOk", "daysToEarnings"
+    "holdDays", "pnlYen", "rMultiple", "suggestedShares", "stopDistanceAtr", "volumeRatio", "marketRegimeOk"
   ];
 
   const lines = records.map((record) =>
@@ -233,8 +231,7 @@ function performanceCsv(records: AnalyzedSignal[]): string {
       record.candidate.suggestedShares ?? "",
       record.candidate.stopDistanceAtr === null ? "" : record.candidate.stopDistanceAtr.toFixed(3),
       record.candidate.volumeRatio === null ? "" : record.candidate.volumeRatio.toFixed(3),
-      record.marketRegimeOk === null ? "" : record.marketRegimeOk,
-      record.candidate.daysToEarnings ?? ""
+      record.marketRegimeOk === null ? "" : record.marketRegimeOk
     ]
       .map(csvCell)
       .join(",")

@@ -5,8 +5,6 @@ import { CohortRecord, runBacktest, ThemeDayRecord, TradeRecord } from "../lib/b
 import {
   computeTradeStats,
   csvCell,
-  EARNINGS_BANDS,
-  earningsBand,
   formatTable,
   groupBy,
   individualScoreBand,
@@ -26,7 +24,7 @@ import {
   yen
 } from "../lib/backtest/report";
 import { StopMode } from "../lib/backtest/simulate";
-import { toEarningsRows, toPriceRows, toWatchlistRows } from "../lib/csv";
+import { toPriceRows, toWatchlistRows } from "../lib/csv";
 import { rulesHashOf } from "../lib/snapshot";
 import { CandidateStatus, QualityFilterMode, Rules, SizingMode, ThemeScoringMode, ThemeStatus } from "../lib/types";
 
@@ -51,9 +49,7 @@ const args = parseArgs({
     "stop-tight-filter": { type: "string" },
     "volume-filter": { type: "string" },
     "market-filter": { type: "string" },
-    "earnings-filter": { type: "string" },
     "theme-scoring": { type: "string" },
-    earnings: { type: "string", default: "data/earnings.csv" },
     out: { type: "string", default: "data/backtest" }
   }
 }).values;
@@ -95,7 +91,6 @@ function filterModeOf(value: string | undefined, flag: string): QualityFilterMod
 const stopTightOverride = filterModeOf(args["stop-tight-filter"], "--stop-tight-filter");
 const volumeOverride = filterModeOf(args["volume-filter"], "--volume-filter");
 const marketOverride = filterModeOf(args["market-filter"], "--market-filter");
-const earningsOverride = filterModeOf(args["earnings-filter"], "--earnings-filter");
 
 const themeScoringOverride = args["theme-scoring"] as ThemeScoringMode | undefined;
 if (themeScoringOverride !== undefined && themeScoringOverride !== "binary" && themeScoringOverride !== "continuous") {
@@ -110,15 +105,10 @@ const rules: Rules = {
   ...(stopTightOverride !== undefined ? { stopTightFilterMode: stopTightOverride } : {}),
   ...(volumeOverride !== undefined ? { volumeFilterMode: volumeOverride } : {}),
   ...(marketOverride !== undefined ? { marketFilterMode: marketOverride } : {}),
-  ...(earningsOverride !== undefined ? { earningsFilterMode: earningsOverride } : {}),
   ...(themeScoringOverride !== undefined ? { themeScoringMode: themeScoringOverride } : {})
 };
 const watchlist = toWatchlistRows(readFileSync(path.join(root, "data/watchlist.csv"), "utf8"));
 const prices = toPriceRows(readFileSync(pricesPath, "utf8"));
-
-// data/earnings.csv はオプショナル(未作成なら空)。存在すれば決算日フィルターに使う
-const earningsPath = path.resolve(root, args.earnings!);
-const earnings = existsSync(earningsPath) ? toEarningsRows(readFileSync(earningsPath, "utf8")) : [];
 
 // 市場指標の行が無いと地合いフィルター・レジーム集計は不発になる(既存 prices_backtest.csv には1306が無い)
 if (!prices.some((row) => row.code === rules.marketIndexCode)) {
@@ -133,8 +123,7 @@ const result = runBacktest(watchlist, prices, rules, {
   to: args.to,
   maxHoldDays,
   stopMode,
-  statuses,
-  earnings
+  statuses
 });
 
 if (result.evaluatedDays.length === 0) {
@@ -164,7 +153,6 @@ const summary = {
     volumeFilterMode: rules.volumeFilterMode,
     marketFilterMode: rules.marketFilterMode,
     marketIndexCode: rules.marketIndexCode,
-    earningsFilterMode: rules.earningsFilterMode,
     themeScoringMode: rules.themeScoringMode,
     lotSize: rules.lotSize,
     maxPositionYen: rules.maxPositionYen,
@@ -184,8 +172,7 @@ const summary = {
     month: breakdown(result.trades, (record) => record.signalDate.slice(0, 7), "key"),
     stopAtrBand: bandBreakdown(result.trades, (record) => stopAtrBand(record.stopDistanceAtr), STOP_ATR_BANDS),
     volumeRatioBand: bandBreakdown(result.trades, (record) => volumeRatioBand(record.volumeRatio), VOLUME_RATIO_BANDS),
-    marketRegime: bandBreakdown(result.trades, (record) => marketRegimeBand(record.marketRegimeOk), MARKET_REGIME_BANDS),
-    earningsProximity: bandBreakdown(result.trades, (record) => earningsBand(record.daysToEarnings), EARNINGS_BANDS)
+    marketRegime: bandBreakdown(result.trades, (record) => marketRegimeBand(record.marketRegimeOk), MARKET_REGIME_BANDS)
   },
   cohorts: cohortSummary(result.cohorts),
   // 執行モデル非依存の検証: バンド別のフォワードリターンで閾値(0.3 / 0.85)の妥当性を直接読む
@@ -206,10 +193,6 @@ const summary = {
     marketRegime: {
       buy_candidate: cohortBandSummary(result.cohorts, "buy_candidate", (record) => marketRegimeBand(record.marketRegimeOk), MARKET_REGIME_BANDS),
       watch: cohortBandSummary(result.cohorts, "watch", (record) => marketRegimeBand(record.marketRegimeOk), MARKET_REGIME_BANDS)
-    },
-    earningsProximity: {
-      buy_candidate: cohortBandSummary(result.cohorts, "buy_candidate", (record) => earningsBand(record.daysToEarnings), EARNINGS_BANDS),
-      watch: cohortBandSummary(result.cohorts, "watch", (record) => earningsBand(record.daysToEarnings), EARNINGS_BANDS)
     }
   },
   themeStability: themeStabilityOf(result.themeDays),
@@ -334,7 +317,7 @@ function tradesCsv(records: TradeRecord[]): string {
     "signalDate", "code", "name", "theme", "status", "individualScore", "themeScore", "exitMode",
     "rewardR", "stopUsed", "filled", "noFillReason", "entryDate", "entryFillPrice",
     "exitDate", "exitPrice", "exitReason", "holdDays", "pnlYen", "rMultiple",
-    "shares", "stopDistanceAtr", "volumeRatio", "marketRegimeOk", "daysToEarnings"
+    "shares", "stopDistanceAtr", "volumeRatio", "marketRegimeOk"
   ];
 
   const lines = records.map((record) =>
@@ -362,8 +345,7 @@ function tradesCsv(records: TradeRecord[]): string {
       record.shares,
       record.stopDistanceAtr === null ? "" : record.stopDistanceAtr.toFixed(3),
       record.volumeRatio === null ? "" : record.volumeRatio.toFixed(3),
-      record.marketRegimeOk === null ? "" : record.marketRegimeOk,
-      record.daysToEarnings === null ? "" : record.daysToEarnings
+      record.marketRegimeOk === null ? "" : record.marketRegimeOk
     ]
       .map(csvCell)
       .join(",")
@@ -417,7 +399,7 @@ function printReport(): void {
   );
   console.log(
     `sizing: ${rules.sizingMode} / stopTightFilter: ${rules.stopTightFilterMode} / volumeFilter: ${rules.volumeFilterMode}` +
-      ` / marketFilter: ${rules.marketFilterMode}(${rules.marketIndexCode}) / earningsFilter: ${rules.earningsFilterMode}` +
+      ` / marketFilter: ${rules.marketFilterMode}(${rules.marketIndexCode})` +
       ` / themeScoring: ${rules.themeScoringMode}` +
       (rules.maxPositionYen !== null ? ` / maxPositionYen: ${rules.maxPositionYen.toLocaleString("ja-JP")}円` : "")
   );
@@ -452,7 +434,6 @@ function printReport(): void {
   printBreakdown("損切り幅ATRバンド別", summary.breakdowns.stopAtrBand);
   printBreakdown("出来高比バンド別", summary.breakdowns.volumeRatioBand);
   printBreakdown("地合い(市場レジーム)別", summary.breakdowns.marketRegime);
-  printBreakdown("決算接近バンド別", summary.breakdowns.earningsProximity);
 
   console.log("\n## コホート比較（status別フォワードリターン。執行モデルなしの素の値動き）");
   console.log(
@@ -477,8 +458,6 @@ function printReport(): void {
   printCohortBands("テーマスコア帯 (watch)", summary.cohortsByBand.themeScore.watch);
   printCohortBands("地合い (buy_candidate)", summary.cohortsByBand.marketRegime.buy_candidate);
   printCohortBands("地合い (watch)", summary.cohortsByBand.marketRegime.watch);
-  printCohortBands("決算接近 (buy_candidate)", summary.cohortsByBand.earningsProximity.buy_candidate);
-  printCohortBands("決算接近 (watch)", summary.cohortsByBand.earningsProximity.watch);
 
   const stability = summary.themeStability;
   console.log(`\n## テーマ安定性 (themeScoringMode: ${rules.themeScoringMode})`);

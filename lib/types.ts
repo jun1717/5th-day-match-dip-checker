@@ -97,8 +97,6 @@ export interface Rules {
   volumeFilterMode: QualityFilterMode;
   marketIndexCode: string;
   marketFilterMode: QualityFilterMode;
-  earningsExclusionDays: number;
-  earningsFilterMode: QualityFilterMode;
   themeScoringMode: ThemeScoringMode;
   themeMomentumBlend5d: number;
   themeMomentum5dRange: number;
@@ -143,10 +141,6 @@ export interface CandidateResult {
   volumeShortAvg: number | null;
   volumeLongAvg: number | null;
   volumeRatio: number | null;
-  /** 評価日(latest.date)以降で最初の決算発表日。data/earnings.csv に該当が無ければnull */
-  nextEarningsDate: string | null;
-  /** 評価日から nextEarningsDate までの平日数(祝日近似)。nextEarningsDate=null なら null(不罰) */
-  daysToEarnings: number | null;
   individualScore: number;
   themeScore: number;
   themeRank: number | null;

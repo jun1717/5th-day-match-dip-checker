@@ -1,4 +1,3 @@
-import { EarningsRow } from "../csv";
 import { evaluateCandidates, suggestedSharesFor } from "../evaluator";
 import { CandidateResult, CandidateStatus, ExitMode, PriceRow, Rules, ThemeStatus, WatchlistRow } from "../types";
 import { SimulatedTrade, simulateTrade, StopMode } from "./simulate";
@@ -18,8 +17,6 @@ export interface EngineOptions {
   maxHoldDays: number;
   stopMode: StopMode;
   statuses: CandidateStatus[];
-  /** 決算日フィルター用。全期間同じリストでよい(各評価日で「その日以降の最初の日付」を引く) */
-  earnings?: EarningsRow[];
 }
 
 export interface TradeRecord {
@@ -35,7 +32,6 @@ export interface TradeRecord {
   stopDistanceAtr: number | null;
   volumeRatio: number | null;
   marketRegimeOk: boolean | null;
-  daysToEarnings: number | null;
   shares: number;
   trade: SimulatedTrade;
 }
@@ -50,7 +46,6 @@ export interface CohortRecord {
   stopDistanceAtr: number | null;
   volumeRatio: number | null;
   marketRegimeOk: boolean | null;
-  daysToEarnings: number | null;
   fwd5: number | null;
   fwd20: number | null;
 }
@@ -114,7 +109,7 @@ export function runBacktest(
 
     evaluatedDays.push(day);
     const slicedPrices = slicePricesUpTo(seriesByCode);
-    const result = evaluateCandidates(watchlist, slicedPrices, rules, day, options.earnings ?? []);
+    const result = evaluateCandidates(watchlist, slicedPrices, rules, day);
     const marketRegimeOk = result.market?.regimeOk ?? null;
 
     for (const theme of result.themeScores) {
@@ -176,7 +171,6 @@ export function runBacktest(
             stopDistanceAtr: candidate.stopDistanceAtr,
             volumeRatio: candidate.volumeRatio,
             marketRegimeOk,
-            daysToEarnings: candidate.daysToEarnings,
             shares: 0,
             trade: { filled: false, noFillReason: "risk_over_budget", stopUsed: stopForSizing }
           });
@@ -220,7 +214,6 @@ export function runBacktest(
         stopDistanceAtr: candidate.stopDistanceAtr,
         volumeRatio: candidate.volumeRatio,
         marketRegimeOk,
-        daysToEarnings: candidate.daysToEarnings,
         shares,
         trade
       });
@@ -313,7 +306,6 @@ function cohortRecord(
     stopDistanceAtr: candidate.stopDistanceAtr,
     volumeRatio: candidate.volumeRatio,
     marketRegimeOk,
-    daysToEarnings: candidate.daysToEarnings,
     fwd5: forwardReturn(series, 5),
     fwd20: forwardReturn(series, 20)
   };

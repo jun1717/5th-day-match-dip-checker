@@ -34,8 +34,6 @@ function candidateFixture(overrides: Partial<CandidateResult> = {}): CandidateRe
     volumeShortAvg: 900000,
     volumeLongAvg: 1000000,
     volumeRatio: 0.9,
-    nextEarningsDate: "2026-08-04",
-    daysToEarnings: 18,
     individualScore: 100,
     themeScore: 100,
     themeRank: 1,
@@ -121,8 +119,6 @@ test("toSlimCandidate keeps analysis fields and converts reasons to keys", () =>
   assert.equal(slim.positionCost, 599985);
   assert.equal(slim.signalDayLow, 5950);
   assert.equal(slim.orderShares, 200);
-  assert.equal(slim.nextEarningsDate, "2026-08-04");
-  assert.equal(slim.daysToEarnings, 18);
   assert.deepEqual(slim.reasonKeys, ["buy_setup_ready"]);
 
   const keys = Object.keys(slim);

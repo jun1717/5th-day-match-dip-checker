@@ -21,7 +21,7 @@ argument-hint: "<検証したい変更内容>"
 | ATR損切り品質・出来高ドライアップ | `flag` 維持(excludeは基準未達。コホートは仮説と逆傾向) | 同上 |
 | 地合いフィルター | `flag` 維持(excludeで期待値R 0.67→0.49)。**ベア相場経験後に再検証予約あり** | [2026-07-market-filter.md](../../../docs/backtest-results/2026-07-market-filter.md) |
 | テーマスコア方式 | `binary` 維持(continuousは閾値80に中位テーマが流入しR劣化) | [2026-07-theme-scoring.md](../../../docs/backtest-results/2026-07-theme-scoring.md) |
-| 決算フィルター | `exclude` 採用(リスク上限の不変条件。性能仮説ではないので成績を理由に外さない) | README |
+| 決算フィルター | **削除済み**(2026-08に機能ごと撤去。`earnings.csv` の維持コストが便益を上回ったため。決算またぎの回避は全銘柄の手動確認へ移行。**再導入の提案はA/Bではなく運用コストの議論として扱う**) | [2026-08-earnings-filter-removal.md](../../../docs/backtest-results/2026-08-earnings-filter-removal.md) |
 
 ### 2. データ鮮度の確認
 
@@ -33,7 +33,7 @@ python3 scripts/fetch_prices.py --period 2y --output data/prices_backtest.csv --
 
 ### 3. 変更の表現方法を決める
 
-- **CLI上書きで表現できる場合**(rules.json編集不要): `--sizing fixed|risk` / `--stop-tight-filter off|flag|exclude` / `--volume-filter off|flag|exclude` / `--market-filter off|flag|exclude` / `--earnings-filter off|flag|exclude` / `--theme-scoring binary|continuous` / `--stop-mode prev-day|signal` / `--max-hold-days` / `--statuses`
+- **CLI上書きで表現できる場合**(rules.json編集不要): `--sizing fixed|risk` / `--stop-tight-filter off|flag|exclude` / `--volume-filter off|flag|exclude` / `--market-filter off|flag|exclude` / `--theme-scoring binary|continuous` / `--stop-mode prev-day|signal` / `--max-hold-days` / `--statuses`
 - **閾値変更などCLIにない項目**: `config/rules.json` を一時編集して変更案を実行し、**実行後すぐ元に戻す**(現在値を控えてから編集する。summary.jsonのrulesHashで版は追跡される)。
 
 ### 4. ベースラインと変更案を実行
@@ -50,7 +50,7 @@ npm run backtest -- <変更> --out data/backtest/<実験名>
 **採用基準: ベースライン比で期待値Rが改善し、かつ約定数がベースラインの60%以上残る。**
 
 比較表に載せる指標: シグナル数 / 約定数 / 勝率 / 期待値R / 期待値(円) / PF / 累積損益 / 最大DD。
-関連するバンド別コホート(`summary.json` の `cohortsByBand`: stopAtr・volumeRatio・themeScore・marketRegime・daysToEarnings)も、変更内容に関係するものを確認する。
+関連するバンド別コホート(`summary.json` の `cohortsByBand`: stopAtr・volumeRatio・themeScore・marketRegime)も、変更内容に関係するものを確認する。
 
 解釈の注意(既存記録と同じ):
 - ウォッチリスト自体が後知恵選択なので**絶対値は楽観的。構成間の相対比較にだけ使う**。

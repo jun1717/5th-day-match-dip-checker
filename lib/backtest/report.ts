@@ -132,17 +132,6 @@ export function marketRegimeBand(value: boolean | null): string {
   return value ? "OK" : "NG";
 }
 
-// 0-3日の境界は earningsExclusionDays 既定値(3)に一致させてある(変更時はこの境界も読み替えること)。
-export const EARNINGS_BANDS = ["0-3日", "4-10日", ">10日", "不明"] as const;
-
-/** 評価日から次回決算までの平日数バンド。null(決算未登録)は "不明" */
-export function earningsBand(value: number | null): string {
-  if (value === null) return "不明";
-  if (value <= 3) return "0-3日";
-  if (value <= 10) return "4-10日";
-  return ">10日";
-}
-
 function ratioOrNull(count: number, total: number): number | null {
   return total > 0 ? count / total : null;
 }

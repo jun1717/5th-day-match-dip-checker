@@ -34,8 +34,6 @@
   "volumeFilterMode": "flag",
   "marketIndexCode": "1306",
   "marketFilterMode": "flag",
-  "earningsExclusionDays": 3,
-  "earningsFilterMode": "exclude",
   "themeScoringMode": "binary",
   "themeMomentumBlend5d": 0.6,
   "themeMomentum5dRange": 0.05,

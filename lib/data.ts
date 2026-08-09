@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { EarningsRow, toEarningsRows, toPriceRows, toWatchlistRows } from "./csv";
+import { toPriceRows, toWatchlistRows } from "./csv";
 import { evaluateCandidates } from "./evaluator";
 import {
   CandidateResult,
@@ -35,15 +35,6 @@ export function readPricesForCode(code: string): PriceRow[] {
   return readPrices().filter((row) => row.code === code);
 }
 
-export function readEarnings(): EarningsRow[] {
-  const filePath = resolvePath("data/earnings.csv");
-  if (!existsSync(filePath)) {
-    return [];
-  }
-
-  return toEarningsRows(readText("data/earnings.csv"));
-}
-
 export function readEvaluation(): EvaluationOutput {
   const rules = readRules();
   const generatedCandidates = readJsonFile<CandidateResult[]>("data/candidates.json", []);
@@ -64,7 +55,7 @@ export function readEvaluation(): EvaluationOutput {
 
   // generatedAt はデフォルト(現在時刻)を使うため undefined を渡す
   return {
-    ...evaluateCandidates(readWatchlist(), readPrices(), rules, undefined, readEarnings()),
+    ...evaluateCandidates(readWatchlist(), readPrices(), rules),
     pricesAsOf,
     pricesFetchedAt
   };

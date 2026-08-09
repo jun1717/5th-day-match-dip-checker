@@ -1,5 +1,3 @@
-import { weekdaysBetween } from "./calendar";
-import { EarningsRow } from "./csv";
 import { averageTrueRangeAt, deviation, max, movingAverageAt, rateOfChangeAt, trendFrom } from "./indicators";
 import {
   percentileOf,
@@ -36,7 +34,6 @@ type CandidateDraft = Omit<CandidateResult, "themeScore" | "themeRank" | "status
     expectedLossWithinLimit: boolean;
     stopNotTooTight: boolean;
     volumeDryUp: boolean;
-    noEarningsSoon: boolean;
   };
 };
 
@@ -44,17 +41,13 @@ export function evaluateCandidates(
   watchlist: WatchlistRow[],
   prices: PriceRow[],
   rules: Rules,
-  generatedAt = new Date().toISOString(),
-  earnings: EarningsRow[] = []
+  generatedAt = new Date().toISOString()
 ): EvaluationOutput {
   const pricesByCode = groupPricesByCode(prices);
   // 市場レジームは drafts 生成前に一度だけ計算する(全銘柄に等しくかかるマスタースイッチ)
   const market = marketConditionOf(pricesByCode, rules);
   const marketRegimeOk = market?.regimeOk ?? null;
-  const earningsByCode = groupEarningsByCode(earnings);
-  const drafts = watchlist.map((stock) =>
-    evaluateStock(stock, pricesByCode.get(stock.code) ?? [], rules, earningsByCode.get(stock.code) ?? [])
-  );
+  const drafts = watchlist.map((stock) => evaluateStock(stock, pricesByCode.get(stock.code) ?? [], rules));
   const themeScores = evaluateThemes(drafts, rules);
   const themeByName = new Map(themeScores.map((theme) => [theme.theme, theme]));
 
@@ -123,22 +116,6 @@ function marketConditionOf(pricesByCode: Map<string, PriceRow[]>, rules: Rules):
   };
 }
 
-/** code → 決算発表日(YYYY-MM-DD)の昇順配列。evaluateStock がその銘柄の直近未来日を引く */
-function groupEarningsByCode(earnings: EarningsRow[]): Map<string, string[]> {
-  const grouped = new Map<string, string[]>();
-  for (const row of earnings) {
-    const dates = grouped.get(row.code) ?? [];
-    dates.push(row.earningsDate);
-    grouped.set(row.code, dates);
-  }
-
-  for (const dates of grouped.values()) {
-    dates.sort((a, b) => a.localeCompare(b));
-  }
-
-  return grouped;
-}
-
 function groupPricesByCode(prices: PriceRow[]): Map<string, PriceRow[]> {
   const grouped = new Map<string, PriceRow[]>();
 
@@ -155,7 +132,7 @@ function groupPricesByCode(prices: PriceRow[]): Map<string, PriceRow[]> {
   return grouped;
 }
 
-function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, earningsDates: string[]): CandidateDraft {
+function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules): CandidateDraft {
   const minimumRows = Math.max(rules.maMiddle + 1, 26);
   if (prices.length < minimumRows) {
     return insufficientCandidate(stock, `価格データが不足しています（${prices.length}/${minimumRows}営業日）`, rules);
@@ -206,10 +183,6 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, ea
   const orderExpectedLoss = orderRiskR === null ? null : expectedLossFor(entryPrice, signalDayLow, orderRiskR, orderShares, rules);
   const orderRewardR = orderRiskR !== null && orderRiskR > 0 && reward !== null ? reward / orderRiskR : null;
 
-  // 決算接近: 基準日は必ず latest.date(バックテストの過去日評価で当時の未来決算を正しく効かせる)
-  const nextEarningsDate = earningsDates.find((date) => date >= latest.date) ?? null;
-  const daysToEarnings = nextEarningsDate === null ? null : weekdaysBetween(latest.date, nextEarningsDate);
-
   const conditions = {
     ma25TrendUp: ma25Trend === "up",
     closeAboveMa25: ma25 !== null && latest.close > ma25,
@@ -225,9 +198,7 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, ea
     expectedLossWithinLimit: expectedLoss !== null && expectedLoss > 0 && expectedLoss <= rules.maxLossYen,
     // 測定不能(null)は罰しない。フラグ・除外は明確な違反時のみ
     stopNotTooTight: stopDistanceAtr === null || stopDistanceAtr >= rules.stopAtrMinMultiple,
-    volumeDryUp: volumeRatio === null || volumeRatio <= rules.volumeDryUpMaxRatio,
-    // 決算未登録(daysToEarnings=null)は罰しない。daysToEarnings=0(評価日=発表日)も除外窓に含む
-    noEarningsSoon: daysToEarnings === null || daysToEarnings > rules.earningsExclusionDays
+    volumeDryUp: volumeRatio === null || volumeRatio <= rules.volumeDryUpMaxRatio
   };
 
   const individualScore = scoreIndividual(
@@ -264,8 +235,6 @@ function evaluateStock(stock: WatchlistRow, prices: PriceRow[], rules: Rules, ea
     volumeShortAvg,
     volumeLongAvg,
     volumeRatio,
-    nextEarningsDate,
-    daysToEarnings,
     individualScore,
     entryPrice,
     entryUpperPrice,
@@ -360,8 +329,6 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
     volumeShortAvg: null,
     volumeLongAvg: null,
     volumeRatio: null,
-    nextEarningsDate: null,
-    daysToEarnings: null,
     individualScore: 0,
     entryPrice: null,
     entryUpperPrice: null,
@@ -390,8 +357,7 @@ function insufficientCandidate(stock: WatchlistRow, detail: string, rules: Rules
       expectedLossWithinLimit: false,
       // 測定不能は罰しない(null→true と同じ扱い)
       stopNotTooTight: true,
-      volumeDryUp: true,
-      noEarningsSoon: true
+      volumeDryUp: true
     }
   };
 }
@@ -718,22 +684,6 @@ function qualityFlagReasons(draft: CandidateDraft, rules: Rules, market: MarketC
   }
 
   if (
-    rules.earningsFilterMode !== "off" &&
-    !draft.conditions.noEarningsSoon &&
-    draft.nextEarningsDate !== null &&
-    draft.daysToEarnings !== null
-  ) {
-    flags.push(
-      reason(
-        "earnings_soon",
-        "決算発表が近い",
-        false,
-        `次回決算 ${draft.nextEarningsDate}（あと${draft.daysToEarnings}営業日） / 発表${rules.earningsExclusionDays}営業日前から買い見送り`
-      )
-    );
-  }
-
-  if (
     rules.marketFilterMode !== "off" &&
     market !== null &&
     market.regimeOk === false &&
@@ -838,8 +788,7 @@ function classifyCandidate(
     const qualityExcluded =
       (rules.stopTightFilterMode === "exclude" && !draft.conditions.stopNotTooTight) ||
       (rules.volumeFilterMode === "exclude" && !draft.conditions.volumeDryUp) ||
-      (rules.marketFilterMode === "exclude" && marketRegimeOk === false) ||
-      (rules.earningsFilterMode === "exclude" && !draft.conditions.noEarningsSoon);
+      (rules.marketFilterMode === "exclude" && marketRegimeOk === false);
 
     return qualityExcluded ? "watch" : "buy_candidate";
   }
