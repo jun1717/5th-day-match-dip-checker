@@ -84,6 +84,7 @@ export function evaluateCandidates(
   return {
     generatedAt,
     pricesAsOf: null,
+    pricesFetchedAt: null,
     rules,
     candidates,
     themeScores,

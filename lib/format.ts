@@ -49,6 +49,18 @@ export function formatPricesAsOf(isoString: string | null): string {
   return match ? `${match[1]} 時点` : "前日終値";
 }
 
+/**
+ * ISO日時を「M/D HH:MM」に。パース不能・null は "不明"。
+ * 文字列をそのまま読む(JSTで書かれた値を閲覧端末のタイムゾーンで解釈し直さない)。
+ */
+export function formatDateTime(isoString: string | null): string {
+  if (!isoString) return "不明";
+  const match = isoString.match(/^\d{4}-(\d{2})-(\d{2})T(\d{2}:\d{2})/);
+  if (!match) return "不明";
+  const [, month, day, time] = match;
+  return `${Number(month)}/${Number(day)} ${time}`;
+}
+
 export function trendLabel(trend: Trend): string {
   return {
     up: "上向き",

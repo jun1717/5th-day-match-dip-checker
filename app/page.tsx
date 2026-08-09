@@ -26,6 +26,7 @@ export default function HomePage() {
 
       <FreshnessBanner
         pricesAsOf={evaluation.pricesAsOf}
+        pricesFetchedAt={evaluation.pricesFetchedAt}
         latestSnapshotDate={readLatestSnapshotDate()}
         dataDate={evaluation.candidates[0]?.date ?? null}
       />

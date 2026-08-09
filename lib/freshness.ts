@@ -14,6 +14,11 @@ const MS_PER_DAY = 86_400_000;
 const DECISION_HOUR_JST = 16;
 const DECISION_MINUTE_JST = 40;
 
+/** 東証の大引け(JST)。この時刻の板寄せで終値が確定する */
+const CLOSE_HOUR_JST = 15;
+const CLOSE_MINUTE_JST = 30;
+const CLOSE_MINUTES_OF_DAY = CLOSE_HOUR_JST * 60 + CLOSE_MINUTE_JST;
+
 function isWeekday(jstDate: Date): boolean {
   const dow = jstDate.getUTCDay();
   return dow >= 1 && dow <= 5;
@@ -48,34 +53,73 @@ export function latestDecisionDay(nowMs: number): string {
   return formatIsoDate(jst);
 }
 
+/** JSTの0時からの経過分 */
+function jstMinutesOfDay(ms: number): number {
+  const jst = new Date(ms + JST_OFFSET_MS);
+  return jst.getUTCHours() * 60 + jst.getUTCMinutes();
+}
+
+/** その営業日の大引け(15:30 JST)のepoch ms */
+function closeMsOf(isoDate: string): number {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return Date.UTC(year, month - 1, day, CLOSE_HOUR_JST - 9, CLOSE_MINUTE_JST);
+}
+
+/**
+ * unconfirmed = 表示中のバーが場中の途中値 / stale = 自動更新が止まっている /
+ * unknown = 取得時刻が読めず判定できない
+ */
+export type ConfirmedCloseReason = "unconfirmed" | "stale" | "unknown";
+
 export interface ConfirmedCloseWarning {
+  reason: ConfirmedCloseReason;
   /** 確定日足が期待される営業日 */
   decisionDay: string;
   /** 表示に使う(nullは取得時刻不明) */
   pricesAsOf: string | null;
+  /** 表示に使う(nullは取得時刻不明) */
+  pricesFetchedAt: string | null;
 }
 
 /**
  * W1: 確定前データ警告。警告不要なら null。
- * D = latestDecisionDay(nowMs) とし、pricesAsOf が「D の 15:30:00 JST」以上なら確定済み(null)。
- * pricesAsOf が null / パース不能な場合は警告する。境界: ちょうど15:30:00は確定扱い(>=)。
+ *
+ * 「終値が確定しているか」と「その確定終値が最新か」は別の失敗で、判定材料も別:
+ *  - unconfirmed: pricesAsOf(取引所が公表する直近の終値時刻)の *時刻* が15:30 JST未満
+ *    = まだ大引け前の気配 = 表示中のバーは場中の途中値。日付を見ないので祝日カレンダーが要らない。
+ *  - stale: pricesFetchedAt(価格取得を実行した時刻)が「D の 15:30 JST」より前
+ *    = 判断開始済み営業日 D の大引け後に自動更新が1度も走っていない。
+ *
+ * この分解で祝日(休場の平日)の誤警告が消える。前営業日の確定終値が最新なので unconfirmed に
+ * 当たらず、cronは曜日指定(1-5)で祝日も走るため stale にも当たらない。
+ * 逆に本当に更新が止まった場合は、pricesAsOf が前営業日の15:30のままでも stale で捕まる
+ * (pricesAsOf だけでは祝日と区別できないため、fetchedAt が必要)。
+ *
+ * 境界: ちょうど15:30:00は確定扱い(>=)。null / パース不能は unknown として警告する。
  */
-export function confirmedCloseWarning(pricesAsOf: string | null, nowMs: number): ConfirmedCloseWarning | null {
+export function confirmedCloseWarning(
+  pricesAsOf: string | null,
+  pricesFetchedAt: string | null,
+  nowMs: number
+): ConfirmedCloseWarning | null {
   const decisionDay = latestDecisionDay(nowMs);
+  const base = { decisionDay, pricesAsOf, pricesFetchedAt };
 
-  if (pricesAsOf !== null) {
-    const asOfMs = Date.parse(pricesAsOf);
-    if (!Number.isNaN(asOfMs)) {
-      const [year, month, day] = decisionDay.split("-").map(Number);
-      // Dの15:30 JST = Dの06:30 UTC
-      const closeMs = Date.UTC(year, month - 1, day, 6, 30);
-      if (asOfMs >= closeMs) {
-        return null;
-      }
-    }
+  const asOfMs = pricesAsOf === null ? Number.NaN : Date.parse(pricesAsOf);
+  const fetchedAtMs = pricesFetchedAt === null ? Number.NaN : Date.parse(pricesFetchedAt);
+  if (Number.isNaN(asOfMs) || Number.isNaN(fetchedAtMs)) {
+    return { ...base, reason: "unknown" };
   }
 
-  return { decisionDay, pricesAsOf };
+  if (jstMinutesOfDay(asOfMs) < CLOSE_MINUTES_OF_DAY) {
+    return { ...base, reason: "unconfirmed" };
+  }
+
+  if (fetchedAtMs < closeMsOf(decisionDay)) {
+    return { ...base, reason: "stale" };
+  }
+
+  return null;
 }
 
 export interface SnapshotLagWarning {

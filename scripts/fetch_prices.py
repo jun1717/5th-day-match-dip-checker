@@ -257,8 +257,13 @@ def main() -> int:
         writer.writerows(rows)
 
     if is_default_output:
+        # fetched_at(このビルドの実行時刻)は as_of と対で必要。
+        # as_of だけでは「祝日で前営業日の終値が最新」と「更新が止まって前営業日のまま」が区別できない。
         with AS_OF_PATH.open("w", encoding="utf-8") as file:
-            json.dump({"as_of": prices_as_of}, file)
+            json.dump(
+                {"as_of": prices_as_of, "fetched_at": datetime.now(JST).replace(microsecond=0).isoformat()},
+                file,
+            )
 
     try:
         display_path = output_path.relative_to(ROOT)

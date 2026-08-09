@@ -50,12 +50,13 @@ export function readEvaluation(): EvaluationOutput {
   const rules = readRules();
   const generatedCandidates = readJsonFile<CandidateResult[]>("data/candidates.json", []);
   const generatedThemes = readJsonFile<ThemeScore[]>("data/theme_scores.json", []);
-  const pricesAsOf = readPricesAsOf();
+  const { asOf: pricesAsOf, fetchedAt: pricesFetchedAt } = readPricesAsOf();
 
   if (generatedCandidates.length > 0 || generatedThemes.length > 0) {
     return {
       generatedAt: generatedFileTime(),
       pricesAsOf,
+      pricesFetchedAt,
       rules,
       candidates: generatedCandidates,
       themeScores: generatedThemes,
@@ -64,7 +65,11 @@ export function readEvaluation(): EvaluationOutput {
   }
 
   // generatedAt はデフォルト(現在時刻)を使うため undefined を渡す
-  return { ...evaluateCandidates(readWatchlist(), readPrices(), rules, undefined, readEarnings()), pricesAsOf };
+  return {
+    ...evaluateCandidates(readWatchlist(), readPrices(), rules, undefined, readEarnings()),
+    pricesAsOf,
+    pricesFetchedAt
+  };
 }
 
 /** data/history/signals/ にある YYYY-MM-DD.json の最大日付。ディレクトリ不存在・0件は null */
@@ -120,11 +125,12 @@ function readJsonFile<T>(relativePath: string, fallback: T): T {
   return JSON.parse(text) as T;
 }
 
-function readPricesAsOf(): string | null {
+/** fetched_at は後から追加した項目のため、古い prices_as_of.json では欠ける(=null扱い→警告側) */
+function readPricesAsOf(): { asOf: string | null; fetchedAt: string | null } {
   const filePath = resolvePath("data/prices_as_of.json");
-  if (!existsSync(filePath)) return null;
-  const data = JSON.parse(readFileSync(filePath, "utf8")) as { as_of: string | null };
-  return data.as_of ?? null;
+  if (!existsSync(filePath)) return { asOf: null, fetchedAt: null };
+  const data = JSON.parse(readFileSync(filePath, "utf8")) as { as_of?: string | null; fetched_at?: string | null };
+  return { asOf: data.as_of ?? null, fetchedAt: data.fetched_at ?? null };
 }
 
 function readText(relativePath: string): string {

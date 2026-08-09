@@ -226,7 +226,10 @@ export interface MarketCondition {
 
 export interface EvaluationOutput {
   generatedAt: string;
+  /** 取引所が公表する直近の終値時刻。確定終値かの判定に使う */
   pricesAsOf: string | null;
+  /** 価格取得を実行した時刻。自動更新が止まっていないかの判定に使う */
+  pricesFetchedAt: string | null;
   rules: Rules;
   candidates: CandidateResult[];
   themeScores: ThemeScore[];
