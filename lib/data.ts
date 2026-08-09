@@ -1,10 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { analyzeBbWatch } from "./bbWatch";
 import { EarningsRow, toEarningsRows, toPriceRows, toWatchlistRows } from "./csv";
 import { evaluateCandidates } from "./evaluator";
 import {
-  BbWatchResult,
   CandidateResult,
   EvaluationOutput,
   MarketCondition,
@@ -86,21 +84,6 @@ export function readLatestSnapshotDate(): string | null {
     .sort();
 
   return dates.length > 0 ? dates[dates.length - 1] : null;
-}
-
-export function readBbWatch(): BbWatchResult[] {
-  const generated = readJsonFile<BbWatchResult[]>("data/bb_watch.json", []);
-  if (generated.length > 0) {
-    return generated;
-  }
-
-  const rules = readRules();
-  const evaluation = readEvaluation();
-  return analyzeBbWatch(readWatchlist(), readPrices(), evaluation.themeScores, rules);
-}
-
-export function findBbWatch(code: string): BbWatchResult | undefined {
-  return readBbWatch().find((row) => row.code === code);
 }
 
 export function findCandidate(code: string): CandidateResult | undefined {

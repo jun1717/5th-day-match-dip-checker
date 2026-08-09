@@ -104,15 +104,6 @@ export interface Rules {
   themeMomentum5dRange: number;
   themeMomentum20dRange: number;
   scoring: ScoringWeights;
-  bollingerPeriod: number;
-  bbTouchTolerance: number;
-  bbNearTolerance: number;
-  bbLookaheadDays: number;
-  bbSuccessReturnThreshold: number;
-  bbFailureReturnThreshold: number;
-  bbMinTouchCount: number;
-  bbTimingGoodSuccessRate: number;
-  bbThemeScoreThreshold: number;
 }
 
 export interface RuleReason {
@@ -234,62 +225,4 @@ export interface EvaluationOutput {
   candidates: CandidateResult[];
   themeScores: ThemeScore[];
   market: MarketCondition | null;
-}
-
-export type BollingerLine = "ma25" | "bb_minus_1sigma" | "bb_minus_2sigma";
-
-export type PreferredLine = BollingerLine | "insufficient_history";
-
-export type CurrentLine = BollingerLine | "not_near_pullback_line";
-
-export type BbWatchStatus = "timing_good" | "watch" | "insufficient_history" | "not_near";
-
-export interface BbReason {
-  key: string;
-  label: string;
-}
-
-export interface BbLineStats {
-  line: BollingerLine;
-  touchCount: number;
-  successCount: number;
-  failureCount: number;
-  successRate: number;
-  avgMaxReturn5d: number;
-  avgMaxDrawdown5d: number;
-}
-
-export interface BbWatchResult {
-  watchlistKey: WatchlistKey;
-  code: string;
-  name: string;
-  sector: string;
-  theme: string;
-  isLeader: boolean;
-  watchPriority: WatchPriority;
-  themeScore: number;
-  date: string | null;
-  close: number | null;
-  low: number | null;
-  ma25: number | null;
-  stdDev25: number | null;
-  bbUpper1: number | null;
-  bbUpper2: number | null;
-  bbLower1: number | null;
-  bbLower2: number | null;
-  ma25Deviation: number | null;
-  bbUpper1Deviation: number | null;
-  bbUpper2Deviation: number | null;
-  bbLower1Deviation: number | null;
-  bbLower2Deviation: number | null;
-  ma25Trend: Trend;
-  lineStats: BbLineStats[];
-  preferredLine: PreferredLine;
-  currentLine: CurrentLine;
-  successRate: number;
-  touchCount: number;
-  avgMaxReturn5d: number;
-  avgMaxDrawdown5d: number;
-  bbWatchStatus: BbWatchStatus;
-  reasons: BbReason[];
 }
